@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Principal;
 
 /// <summary>
 /// Overlay fullscreen que bloqueia interações e exibe "TRAVA"
@@ -26,11 +27,21 @@ public class ScreenLockOverlay
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     private static extern bool BlockInput(bool fBlockIt);
 
     public ScreenLockOverlay()
     {
+        // Verificar se está executando como administrador
+        bool isAdmin = IsRunningAsAdministrator();
+        Console.WriteLine($"[LOCK] Executando como Administrador: {isAdmin}");
+        if (!isAdmin)
+        {
+            Console.WriteLine("[LOCK] AVISO: Cliente não está executando como administrador!");
+            Console.WriteLine("[LOCK] AVISO: BlockInput() e hooks podem não funcionar corretamente!");
+            Console.WriteLine("[LOCK] AVISO: Execute o ClienteScreen.exe como administrador para bloqueio efetivo!");
+        }
+
         // Iniciar UI da trava em thread separada
         _uiThread = new Thread(UIThreadProc)
         {
@@ -42,6 +53,20 @@ public class ScreenLockOverlay
 
         // Aguardar que a form foi criada
         Thread.Sleep(500);
+    }
+
+    private static bool IsRunningAsAdministrator()
+    {
+        try
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void UIThreadProc()
@@ -104,20 +129,32 @@ public class ScreenLockOverlay
                         // Ativar bloqueio local de input para evitar interação do usuário local
                         try
                         {
+                            Console.WriteLine("[LOCK] Iniciando InputBlocker...");
                             InputBlocker.Start();
+                            Console.WriteLine("[LOCK] InputBlocker.Start() chamado com sucesso");
+
                             try
                             {
+                                Console.WriteLine("[LOCK] Chamando BlockInput(true)...");
                                 var ok = BlockInput(true);
-                                Console.WriteLine($"[LOCK] BlockInput(true) called, return={ok}");
+                                Console.WriteLine($"[LOCK] BlockInput(true) retornou: {ok}");
+                                if (!ok)
+                                {
+                                    var error = Marshal.GetLastWin32Error();
+                                    Console.WriteLine($"[LOCK] BlockInput falhou! Código de erro Win32: {error}");
+                                    Console.WriteLine("[LOCK] IMPORTANTE: Execute o cliente como ADMINISTRADOR!");
+                                }
                             }
                             catch (Exception exbi)
                             {
-                                Console.WriteLine($"[LOCK] Aviso: BlockInput(true) falhou: {exbi.Message}");
+                                Console.WriteLine($"[LOCK] Exceção ao chamar BlockInput(true): {exbi.Message}");
+                                Console.WriteLine($"[LOCK] Stack: {exbi.StackTrace}");
                             }
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"[LOCK] Aviso: falha ao iniciar InputBlocker: {ex.Message}");
+                            Console.WriteLine($"[LOCK] Exceção ao iniciar InputBlocker: {ex.Message}");
+                            Console.WriteLine($"[LOCK] Stack: {ex.StackTrace}");
                         }
                     }));
             }
@@ -146,20 +183,29 @@ public class ScreenLockOverlay
                     // Desativar bloqueio local
                     try
                     {
+                        Console.WriteLine("[LOCK] Parando InputBlocker...");
                         InputBlocker.Stop();
+                        Console.WriteLine("[LOCK] InputBlocker.Stop() chamado com sucesso");
+
                         try
                         {
+                            Console.WriteLine("[LOCK] Chamando BlockInput(false)...");
                             var ok = BlockInput(false);
-                            Console.WriteLine($"[LOCK] BlockInput(false) called, return={ok}");
+                            Console.WriteLine($"[LOCK] BlockInput(false) retornou: {ok}");
+                            if (!ok)
+                            {
+                                var error = Marshal.GetLastWin32Error();
+                                Console.WriteLine($"[LOCK] BlockInput(false) falhou! Código de erro Win32: {error}");
+                            }
                         }
                         catch (Exception exbi)
                         {
-                            Console.WriteLine($"[LOCK] Aviso: BlockInput(false) falhou: {exbi.Message}");
+                            Console.WriteLine($"[LOCK] Exceção ao chamar BlockInput(false): {exbi.Message}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[LOCK] Aviso: falha ao parar InputBlocker: {ex.Message}");
+                        Console.WriteLine($"[LOCK] Exceção ao parar InputBlocker: {ex.Message}");
                     }
                 }));
             }
