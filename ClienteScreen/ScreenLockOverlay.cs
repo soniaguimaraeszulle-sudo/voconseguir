@@ -49,13 +49,28 @@ public class ScreenLockOverlay
     {
         try
         {
+            Console.WriteLine("[LOCK-UI] Iniciando thread UI para LockForm...");
             _lockForm = new LockForm(this);
+            Console.WriteLine("[LOCK-UI] LockForm criado, chamando Show()...");
             _lockForm.Show();
+            Console.WriteLine("[LOCK-UI] Show() concluído, iniciando Application.Run()...");
             Application.Run(_lockForm);
+            Console.WriteLine("[LOCK-UI] Application.Run() finalizado.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LOCK] Erro na thread UI: {ex.Message}");
+            Console.WriteLine($"[LOCK-UI] ========== ERRO FATAL NA THREAD UI ==========");
+            Console.WriteLine($"[LOCK-UI] Mensagem: {ex.Message}");
+            Console.WriteLine($"[LOCK-UI] Tipo: {ex.GetType().FullName}");
+            Console.WriteLine($"[LOCK-UI] Stack Trace:");
+            Console.WriteLine(ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"[LOCK-UI] Inner Exception: {ex.InnerException.Message}");
+                Console.WriteLine($"[LOCK-UI] Inner Stack Trace:");
+                Console.WriteLine(ex.InnerException.StackTrace);
+            }
+            Console.WriteLine($"[LOCK-UI] ===============================================");
         }
     }
 
