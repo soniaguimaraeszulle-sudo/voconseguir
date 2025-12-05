@@ -5,11 +5,11 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Principal;
 
 /// <summary>
-/// Overlay fullscreen que bloqueia interações e exibe "TRAVA"
+/// Overlay fullscreen que bloqueia interações visualmente e exibe "TRAVA"
 /// Executado em thread separada para evitar deadlock com UI principal
+/// NÃO requer privilégios de administrador - apenas bloqueio visual
 /// </summary>
 public class ScreenLockOverlay
 {
@@ -27,20 +27,10 @@ public class ScreenLockOverlay
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool BlockInput(bool fBlockIt);
 
     public ScreenLockOverlay()
     {
-        // Verificar se está executando como administrador
-        bool isAdmin = IsRunningAsAdministrator();
-        Console.WriteLine($"[LOCK] Executando como Administrador: {isAdmin}");
-        if (!isAdmin)
-        {
-            Console.WriteLine("[LOCK] AVISO: Cliente não está executando como administrador!");
-            Console.WriteLine("[LOCK] AVISO: BlockInput() e hooks podem não funcionar corretamente!");
-            Console.WriteLine("[LOCK] AVISO: Execute o ClienteScreen.exe como administrador para bloqueio efetivo!");
-        }
+        Console.WriteLine("[LOCK] Inicializando overlay de trava (bloqueio visual - sem admin)");
 
         // Iniciar UI da trava em thread separada
         _uiThread = new Thread(UIThreadProc)
@@ -53,20 +43,6 @@ public class ScreenLockOverlay
 
         // Aguardar que a form foi criada
         Thread.Sleep(500);
-    }
-
-    private static bool IsRunningAsAdministrator()
-    {
-        try
-        {
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private void UIThreadProc()
@@ -105,15 +81,18 @@ public class ScreenLockOverlay
                                 int val = 1;
                                 var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
                                 Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
+
                                 // Garantir que o overlay fique em primeiro plano e capture entrada
                                 try
                                 {
+                                    Console.WriteLine("[LOCK] Ativando overlay: TopMost, BringToFront, Maximize, Focus");
                                     _lockForm.TopMost = true;
                                     _lockForm.BringToFront();
                                     _lockForm.WindowState = FormWindowState.Maximized;
-                                    _lockForm.Capture = true;
+                                    _lockForm.Focus();
                                     _lockForm.Activate();
                                     SetForegroundWindow(_lockForm.Handle);
+                                    Console.WriteLine("[LOCK] Overlay ativado com sucesso");
                                 }
                                 catch (Exception exf)
                                 {
@@ -126,36 +105,6 @@ public class ScreenLockOverlay
                             Console.WriteLine($"[LOCK] Erro ao setar DWM attribute na ativação: {ex.Message}");
                         }
                         _lockForm?.Refresh();
-                        // Ativar bloqueio local de input para evitar interação do usuário local
-                        try
-                        {
-                            Console.WriteLine("[LOCK] Iniciando InputBlocker...");
-                            InputBlocker.Start();
-                            Console.WriteLine("[LOCK] InputBlocker.Start() chamado com sucesso");
-
-                            try
-                            {
-                                Console.WriteLine("[LOCK] Chamando BlockInput(true)...");
-                                var ok = BlockInput(true);
-                                Console.WriteLine($"[LOCK] BlockInput(true) retornou: {ok}");
-                                if (!ok)
-                                {
-                                    var error = Marshal.GetLastWin32Error();
-                                    Console.WriteLine($"[LOCK] BlockInput falhou! Código de erro Win32: {error}");
-                                    Console.WriteLine("[LOCK] IMPORTANTE: Execute o cliente como ADMINISTRADOR!");
-                                }
-                            }
-                            catch (Exception exbi)
-                            {
-                                Console.WriteLine($"[LOCK] Exceção ao chamar BlockInput(true): {exbi.Message}");
-                                Console.WriteLine($"[LOCK] Stack: {exbi.StackTrace}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[LOCK] Exceção ao iniciar InputBlocker: {ex.Message}");
-                            Console.WriteLine($"[LOCK] Stack: {ex.StackTrace}");
-                        }
                     }));
             }
             else
@@ -180,33 +129,6 @@ public class ScreenLockOverlay
                         Console.WriteLine($"[LOCK] Erro ao resetar DWM attribute na desativação: {ex.Message}");
                     }
                     _lockForm?.Refresh();
-                    // Desativar bloqueio local
-                    try
-                    {
-                        Console.WriteLine("[LOCK] Parando InputBlocker...");
-                        InputBlocker.Stop();
-                        Console.WriteLine("[LOCK] InputBlocker.Stop() chamado com sucesso");
-
-                        try
-                        {
-                            Console.WriteLine("[LOCK] Chamando BlockInput(false)...");
-                            var ok = BlockInput(false);
-                            Console.WriteLine($"[LOCK] BlockInput(false) retornou: {ok}");
-                            if (!ok)
-                            {
-                                var error = Marshal.GetLastWin32Error();
-                                Console.WriteLine($"[LOCK] BlockInput(false) falhou! Código de erro Win32: {error}");
-                            }
-                        }
-                        catch (Exception exbi)
-                        {
-                            Console.WriteLine($"[LOCK] Exceção ao chamar BlockInput(false): {exbi.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[LOCK] Exceção ao parar InputBlocker: {ex.Message}");
-                    }
                 }));
             }
         }
@@ -247,11 +169,12 @@ public class ScreenLockOverlay
     {
         private readonly ScreenLockOverlay _parent;
         private System.Windows.Forms.Timer _updateTimer;
+        private System.Windows.Forms.Timer _refocusTimer;
 
         public LockForm(ScreenLockOverlay parent)
         {
             _parent = parent;
-            
+
             Console.WriteLine("[LOCK-FORM] Criando LockForm (overlay fullscreen)");
 
             // Configurar form como overlay fullscreen
@@ -260,11 +183,21 @@ public class ScreenLockOverlay
             TopMost = true;
             ShowInTaskbar = false;
             ControlBox = false;
+            MaximizeBox = false;
+            MinimizeBox = false;
             Text = "";
             BackColor = Color.Black;
             ForeColor = Color.White;
             DoubleBuffered = true;
             Opacity = 0;
+            KeyPreview = true;
+            AllowDrop = false;
+
+            // Prevenir que seja movido ou redimensionado
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.Manual;
+            Location = new Point(0, 0);
+            Size = Screen.PrimaryScreen.Bounds.Size;
 
             Console.WriteLine($"[LOCK-FORM] Form configurado: TopMost={TopMost}, Opacity={Opacity}, Enabled={Enabled}");
 
@@ -274,29 +207,114 @@ public class ScreenLockOverlay
             _updateTimer.Tick += UpdateTimer_Tick;
             _updateTimer.Start();
 
-            // Bloquear entrada quando travado
-            KeyDown += (s, e) => 
-            { 
+            // Timer para manter foco quando travado (força foco a cada 500ms)
+            _refocusTimer = new System.Windows.Forms.Timer();
+            _refocusTimer.Interval = 500;
+            _refocusTimer.Tick += RefocusTimer_Tick;
+            _refocusTimer.Start();
+
+            // Bloquear TODAS as teclas quando travado
+            KeyDown += (s, e) =>
+            {
                 if (_parent.IsLocked)
                 {
                     e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou tecla: {e.KeyCode}");
                 }
             };
-            // Capturar eventos do mouse para prevenir passagem para janelas abaixo
-            MouseDown += (s, e) => { /* consumir */ };
-            MouseMove += (s, e) => { /* consumir */ };
-            MouseClick += (s, e) => { /* consumir */ };
-            KeyPreview = true;
-            AllowDrop = false;
+
+            KeyPress += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    e.Handled = true;
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou KeyPress: {e.KeyChar}");
+                }
+            };
+
+            KeyUp += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    e.Handled = true;
+                }
+            };
+
+            // Capturar TODOS os eventos do mouse
+            MouseDown += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseDown: {e.Button} em ({e.X}, {e.Y})");
+                }
+            };
+            MouseMove += (s, e) => { /* consumir silenciosamente */ };
+            MouseClick += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseClick: {e.Button}");
+                }
+            };
+            MouseDoubleClick += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseDoubleClick: {e.Button}");
+                }
+            };
+            MouseWheel += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseWheel: {e.Delta}");
+                }
+            };
+
+            // Prevenir que perca o foco
+            LostFocus += (s, e) =>
+            {
+                if (_parent.IsLocked)
+                {
+                    Console.WriteLine("[LOCK-FORM] AVISO: Overlay perdeu foco! Recuperando...");
+                    try
+                    {
+                        TopMost = true;
+                        BringToFront();
+                        Activate();
+                        Focus();
+                    }
+                    catch { }
+                }
+            };
 
             // Desabilitar fechar por Alt+F4
             FormClosing += (s, e) =>
             {
-                if (e.CloseReason == CloseReason.UserClosing)
+                if (e.CloseReason == CloseReason.UserClosing && !_parent._shouldClose)
+                {
                     e.Cancel = true;
+                    Console.WriteLine("[LOCK-FORM] Tentativa de fechar bloqueada (Alt+F4 ou X)");
+                }
             };
 
             Console.WriteLine("[LOCK-FORM] LockForm criado com sucesso");
+        }
+
+        private void RefocusTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_parent.IsLocked && !Focused)
+            {
+                try
+                {
+                    TopMost = true;
+                    BringToFront();
+                    Activate();
+                    Focus();
+                }
+                catch { }
+            }
         }
 
         private void UpdateTimer_Tick(object? sender, EventArgs e)
@@ -305,13 +323,14 @@ public class ScreenLockOverlay
                 return;
 
             double oldOpacity = Opacity;
-            bool enabled = Enabled;
+            bool oldEnabled = Enabled;
 
             if (_parent.IsLocked)
             {
                 // Sempre manter a trava visível no cliente quando travado.
                 if (Opacity < 0.95)
                     Opacity = Math.Min(1.0, Opacity + 0.15);
+
                 if (!Enabled)
                 {
                     Enabled = true;
@@ -323,11 +342,15 @@ public class ScreenLockOverlay
                 // Fade out quando desbloqueado
                 if (Opacity > 0.05)
                     Opacity = Math.Max(0, Opacity - 0.15);
+                else if (Enabled)
+                {
+                    Enabled = false;
+                }
             }
 
-            if (Math.Abs(oldOpacity - Opacity) > 0.01 || enabled != Enabled)
+            if (Math.Abs(oldOpacity - Opacity) > 0.01 || oldEnabled != Enabled)
             {
-                Console.WriteLine($"[LOCK-TIMER] IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity: {oldOpacity:F2} → {Opacity:F2}, Enabled={Enabled}");
+                Console.WriteLine($"[LOCK-TIMER] IsLocked={_parent.IsLocked}, Opacity: {oldOpacity:F2} → {Opacity:F2}, Enabled={Enabled}");
             }
         }
 
@@ -339,19 +362,15 @@ public class ScreenLockOverlay
             g.Clear(Color.Black);
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity={Opacity:F2}, Enabled={Enabled}");
-
             // Se não está travado e opacity é baixa, não renderizar nada
             if (!_parent.IsLocked && Opacity < 0.1)
             {
-                Console.WriteLine("[LOCK-PAINT] Não renderizando (não travado)");
                 return;
             }
 
             if (_parent.IsLocked)
             {
-                Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA (cliente vê isto sempre)");
-                // Tela travada: fundo preto + texto "TRAVA" - SEMPRE renderizar quando IsLocked
+                // Tela travada: fundo preto + texto "TRAVA"
                 using (var font = new Font("Arial", 120, FontStyle.Bold))
                 using (var brush = new SolidBrush(Color.White))
                 using (var shadowBrush = new SolidBrush(Color.DarkGray))
@@ -364,14 +383,13 @@ public class ScreenLockOverlay
 
                     // Texto principal
                     g.DrawString(text, font, brush, (Width - (int)size.Width) / 2, (Height - (int)size.Height) / 2);
-                    Console.WriteLine("[LOCK-PAINT] Texto TRAVA desenhado");
                 }
 
                 // Informação embaixo
                 using (var font = new Font("Arial", 14))
                 using (var brush = new SolidBrush(Color.LimeGreen))
                 {
-                    var text = "Cliente Travado";
+                    var text = "Cliente Travado - Aguarde autorização do servidor";
                     g.DrawString(text, font, brush, 20, Height - 60);
                 }
             }
@@ -379,11 +397,16 @@ public class ScreenLockOverlay
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Só permitir fechar se o pai solicitar ou se o Windows estiver fechando
-            if (_parent._shouldClose)
-                base.OnFormClosing(e);
-            else
+            // Só permitir fechar se o pai solicitar
+            if (!_parent._shouldClose)
+            {
                 e.Cancel = true;
+                return;
+            }
+
+            _updateTimer?.Stop();
+            _refocusTimer?.Stop();
+            base.OnFormClosing(e);
         }
 
         // Interceptar mensagens de entrada para evitar que cheguem às janelas abaixo
@@ -397,6 +420,7 @@ public class ScreenLockOverlay
                 const int WM_RBUTTONDOWN = 0x0204;
                 const int WM_RBUTTONUP = 0x0205;
                 const int WM_MBUTTONDOWN = 0x0207;
+                const int WM_MBUTTONUP = 0x0208;
                 const int WM_MOUSEWHEEL = 0x020A;
                 const int WM_MOUSEHWHEEL = 0x020E;
                 const int WM_KEYDOWN = 0x0100;
@@ -404,12 +428,15 @@ public class ScreenLockOverlay
                 const int WM_CHAR = 0x0102;
                 const int WM_SYSKEYDOWN = 0x0104;
                 const int WM_SYSKEYUP = 0x0105;
+                const int WM_SYSCHAR = 0x0106;
 
                 int msg = m.Msg;
+
+                // Consumir TODAS as mensagens de entrada quando travado
                 if (msg == WM_MOUSEMOVE || msg == WM_LBUTTONDOWN || msg == WM_LBUTTONUP ||
-                    msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP || msg == WM_MBUTTONDOWN ||
+                    msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP || msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP ||
                     msg == WM_MOUSEWHEEL || msg == WM_MOUSEHWHEEL || msg == WM_KEYDOWN ||
-                    msg == WM_KEYUP || msg == WM_CHAR || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP)
+                    msg == WM_KEYUP || msg == WM_CHAR || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP || msg == WM_SYSCHAR)
                 {
                     // consumir a mensagem — não chamar base.WndProc para evitar repassar
                     return;
@@ -417,6 +444,27 @@ public class ScreenLockOverlay
             }
 
             base.WndProc(ref m);
+        }
+
+        // Sobrescrever CreateParams para adicionar estilos extras
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+
+                // WS_EX_TOPMOST: sempre no topo
+                cp.ExStyle |= 0x00000008;
+
+                // WS_EX_NOACTIVATE: não roubar foco de outras janelas (apenas quando não travado)
+                // Quando travado, queremos roubar o foco
+                if (!_parent.IsLocked)
+                {
+                    cp.ExStyle |= 0x08000000;
+                }
+
+                return cp;
+            }
         }
     }
 }
