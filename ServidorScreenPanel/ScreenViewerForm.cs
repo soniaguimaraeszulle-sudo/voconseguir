@@ -429,8 +429,8 @@ public class ScreenViewerForm : Form
         string type = _screenLocked ? "LOCK_SCREEN" : "UNLOCK_SCREEN";
         _mainForm?.AddLog($"[LOCK] Tela {(_screenLocked ? "TRAVADA" : "DESTRAVADA")} - {_session.PcName}");
 
-        // fire-and-forget send
-        _ = _session.SendCommandAsync(new ScreenCommand { Type = type, Payload = "" });
+        // Enviar comando usando o método local que adiciona timestamp e faz log
+        SendCommandAsync(new ScreenCommand { Type = type, Payload = "" });
     }
 
     // =========================================
