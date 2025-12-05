@@ -382,7 +382,23 @@ class Program
                             }
                             break;
 
-                        // PEEK_BEHIND removed: Trava agora já libera o servidor automaticamente.
+                        case "PEEK_BEHIND_ON":
+                            // Servidor quer ver por trás do overlay (cliente continua travado)
+                            if (lockOverlay != null)
+                            {
+                                lockOverlay.SetPeekBehind(true);
+                                Console.WriteLine("  >> [EXEC] Servidor vendo POR TRÁS (cliente continua travado)");
+                            }
+                            break;
+
+                        case "PEEK_BEHIND_OFF":
+                            // Servidor volta a ver o overlay (cliente continua travado)
+                            if (lockOverlay != null)
+                            {
+                                lockOverlay.SetPeekBehind(false);
+                                Console.WriteLine("  >> [EXEC] Servidor voltou a ver OVERLAY (cliente continua travado)");
+                            }
+                            break;
 
                         case "STOP":
                             Console.WriteLine("Servidor solicitou parada do streaming.");

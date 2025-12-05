@@ -18,6 +18,8 @@ public class ScreenViewerForm : Form
     // ========= NOVO: Trava do Cliente =========
     private readonly CheckBox chkLockScreen = new CheckBox();
     private bool _screenLocked = false;
+    private readonly CheckBox chkPeekBehind = new CheckBox();
+    private bool _peekBehind = false;
     // =========================================
 
     public ScreenViewerForm(ClientSession session, MainForm mainForm = null)
@@ -76,13 +78,24 @@ public class ScreenViewerForm : Form
         chkLockScreen.CheckedChanged += ChkLockScreen_CheckedChanged;
         chkLockScreen.Click += ChkLockScreen_Click;
 
-        // botão Peek removido — comportamento: ao travar, o servidor já fica liberado
+        // Checkbox "Ver por trás" - só funciona quando travado
+        chkPeekBehind.Text = "Ver por trás";
+        chkPeekBehind.AutoSize = true;
+        chkPeekBehind.Left = chkLockScreen.Right + 20;
+        chkPeekBehind.Top = 8;
+        chkPeekBehind.Name = "chkPeekBehind";
+        chkPeekBehind.TabStop = false;
+        chkPeekBehind.AutoCheck = false;
+        chkPeekBehind.Enabled = false; // só habilita quando travar
+        chkPeekBehind.CheckedChanged += ChkPeekBehind_CheckedChanged;
+        chkPeekBehind.Click += ChkPeekBehind_Click;
         // =========================================
 
         inputPanel.Controls.Add(chkKeyboard);
         inputPanel.Controls.Add(chkMouse);
         inputPanel.Controls.Add(cmbMonitors);
-        inputPanel.Controls.Add(chkLockScreen);      // NOVO
+        inputPanel.Controls.Add(chkLockScreen);
+        inputPanel.Controls.Add(chkPeekBehind);      // NOVO
 
         Controls.Add(inputPanel);
 
@@ -429,7 +442,52 @@ public class ScreenViewerForm : Form
         string type = _screenLocked ? "LOCK_SCREEN" : "UNLOCK_SCREEN";
         _mainForm?.AddLog($"[LOCK] Tela {(_screenLocked ? "TRAVADA" : "DESTRAVADA")} - {_session.PcName}");
 
+        // Habilitar/desabilitar "Ver por trás" conforme estado da trava
+        if (_screenLocked)
+        {
+            chkPeekBehind.Enabled = true;
+            _mainForm?.AddLog($"[LOCK] Checkbox 'Ver por trás' habilitado");
+        }
+        else
+        {
+            // Ao destravar, desabilitar e desmarcar "Ver por trás"
+            chkPeekBehind.Enabled = false;
+            if (_peekBehind)
+            {
+                _peekBehind = false;
+                chkPeekBehind.Checked = false;
+                // Enviar comando para desativar peek no cliente
+                SendCommandAsync(new ScreenCommand { Type = "PEEK_BEHIND_OFF", Payload = "" });
+            }
+        }
+
         // Enviar comando usando o método local que adiciona timestamp e faz log
+        SendCommandAsync(new ScreenCommand { Type = type, Payload = "" });
+    }
+
+    // ========= NOVO: Handlers de Ver por Trás =========
+    private async void ChkPeekBehind_CheckedChanged(object? sender, EventArgs e)
+    {
+        // CheckedChanged is UI-only; commands are sent by the Click handler
+    }
+
+    private void ChkPeekBehind_Click(object? sender, EventArgs e)
+    {
+        // Só funciona se estiver travado
+        if (!_screenLocked)
+            return;
+
+        // Toggle manual
+        _peekBehind = !_peekBehind;
+        chkPeekBehind.Checked = _peekBehind;
+
+        if (_session?.SendCommandAsync == null)
+            return;
+
+        string type = _peekBehind ? "PEEK_BEHIND_ON" : "PEEK_BEHIND_OFF";
+        _mainForm?.AddLog($"[PEEK] {(_peekBehind ? "VENDO POR TRÁS" : "VOLTOU A VER OVERLAY")} - {_session.PcName}");
+
+        // Enviar comando
         SendCommandAsync(new ScreenCommand { Type = type, Payload = "" });
     }
 

@@ -68,9 +68,10 @@ public class ScreenLockOverlay
 
             if (locked)
             {
-                // Ao travar: manter TRAVA visível no cliente, mas excluir a janela da captura
-                _showBehind = true; // servidor deve ver o desktop livre
+                // Ao travar: CLIENTE vê o overlay E SERVIDOR também vê o overlay (não excluir da captura)
+                _showBehind = false; // servidor também vê o overlay inicialmente
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
+                Console.WriteLine("[LOCK] Cliente E Servidor veem o overlay TRAVA");
 
                     _lockForm?.BeginInvoke(new Action(() =>
                     {
@@ -78,9 +79,10 @@ public class ScreenLockOverlay
                         {
                             if (_lockForm != null)
                             {
-                                int val = 1;
+                                // NÃO excluir da captura - servidor deve ver o overlay também
+                                int val = 0;
                                 var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
+                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=0) - Servidor VÊ o overlay: 0x{hr:X}");
 
                                 // Garantir que o overlay fique em primeiro plano e capture entrada
                                 try
@@ -109,7 +111,7 @@ public class ScreenLockOverlay
             }
             else
             {
-                // Ao destravar: re-incluir overlay na captura
+                // Ao destravar: desativar overlay completamente
                 _showBehind = false;
                 Console.WriteLine("[LOCK] ========== TRAVA DESATIVADA ==========");
 
@@ -121,7 +123,7 @@ public class ScreenLockOverlay
                         {
                             int val = 0;
                             var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
+                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=0): 0x{hr:X}");
                         }
                     }
                     catch (Exception ex)
@@ -129,6 +131,72 @@ public class ScreenLockOverlay
                         Console.WriteLine($"[LOCK] Erro ao resetar DWM attribute na desativação: {ex.Message}");
                     }
                     _lockForm?.Refresh();
+                }));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Alterna visualização "por trás" do overlay.
+    /// Cliente continua travado, mas servidor pode ver por trás do overlay.
+    /// </summary>
+    public void SetPeekBehind(bool peek)
+    {
+        lock (_lockObj)
+        {
+            // Só funciona se estiver travado
+            if (!_isLocked)
+            {
+                Console.WriteLine("[LOCK] AVISO: SetPeekBehind chamado mas cliente não está travado!");
+                return;
+            }
+
+            _showBehind = peek;
+
+            if (peek)
+            {
+                Console.WriteLine("[LOCK] ========== SERVIDOR VENDO POR TRÁS ==========");
+                Console.WriteLine("[LOCK] Cliente continua travado, mas servidor vê a tela real");
+
+                _lockForm?.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        if (_lockForm != null)
+                        {
+                            // Excluir da captura - servidor vê por trás
+                            int val = 1;
+                            var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
+                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=1) - Servidor vê POR TRÁS: 0x{hr:X}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LOCK] Erro ao ativar peek behind: {ex.Message}");
+                    }
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[LOCK] ========== SERVIDOR VOLTOU A VER OVERLAY ==========");
+                Console.WriteLine("[LOCK] Cliente continua travado, servidor vê o overlay novamente");
+
+                _lockForm?.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        if (_lockForm != null)
+                        {
+                            // Re-incluir na captura - servidor vê overlay
+                            int val = 0;
+                            var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
+                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=0) - Servidor VÊ overlay: 0x{hr:X}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LOCK] Erro ao desativar peek behind: {ex.Message}");
+                    }
                 }));
             }
         }
