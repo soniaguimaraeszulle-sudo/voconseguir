@@ -1,0 +1,11 @@
+c:\Projetos\Hook\bin\Debug\net8.0-windows\Hook.deps.json
+c:\Projetos\Hook\bin\Debug\net8.0-windows\Hook.dll
+c:\Projetos\Hook\bin\Debug\net8.0-windows\Hook.pdb
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.GeneratedMSBuildEditorConfig.editorconfig
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.AssemblyInfoInputs.cache
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.AssemblyInfo.cs
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.csproj.CoreCompileInputs.cache
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.dll
+c:\Projetos\Hook\obj\Debug\net8.0-windows\refint\Hook.dll
+c:\Projetos\Hook\obj\Debug\net8.0-windows\Hook.pdb
+c:\Projetos\Hook\obj\Debug\net8.0-windows\ref\Hook.dll
