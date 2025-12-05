@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+  <OutputType>Exe</OutputType>
+  <TargetFramework>net8.0-windows</TargetFramework>
+  <UseWindowsForms>true</UseWindowsForms>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <Nullable>enable</Nullable>
+</PropertyGroup>
+
+<ItemGroup>
+  <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+  <PackageReference Include="Google.Protobuf" Version="3.33.1" />
+  <PackageReference Include="Grpc.Tools" Version="2.76.0">
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PrivateAssets>all</PrivateAssets>
+  </PackageReference>
+  <PackageReference Include="System.Management" Version="7.0.0" />
+</ItemGroup>
+
+<ItemGroup>
+  <ProjectReference Include="..\Hook\Hook.csproj" />
+</ItemGroup>
+
+
+  <ItemGroup>
+    <Protobuf Include="Protos\screen.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>
