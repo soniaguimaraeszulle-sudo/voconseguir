@@ -2,7 +2,7 @@
 chcp 65001 >nul
 cls
 echo ============================================================
-echo  PUBLICADOR - Screen Panel (Gera executáveis standalone)
+echo  PUBLICADOR STANDALONE - NÃO PRECISA .NET INSTALADO
 echo ============================================================
 echo.
 
@@ -30,10 +30,10 @@ if not exist "%OUTPUT_DIR%\Cliente" mkdir "%OUTPUT_DIR%\Cliente"
 if not exist "%OUTPUT_DIR%\Servidor" mkdir "%OUTPUT_DIR%\Servidor"
 
 echo ============================================================
-echo [1/2] Publicando ClienteScreen (standalone)...
+echo [1/2] Publicando ClienteScreen (standalone - NÃO precisa .NET)
 echo ============================================================
 cd /d "%ROOT_DIR%ClienteScreen"
-dotnet publish ClienteScreen.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o "%OUTPUT_DIR%\Cliente"
+dotnet publish ClienteScreen.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%OUTPUT_DIR%\Cliente"
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERRO] Falha ao publicar ClienteScreen!
@@ -45,10 +45,10 @@ echo [OK] ClienteScreen publicado com sucesso!
 echo.
 
 echo ============================================================
-echo [2/2] Publicando ServidorScreenPanel (standalone)...
+echo [2/2] Publicando ServidorScreenPanel (standalone - NÃO precisa .NET)
 echo ============================================================
 cd /d "%ROOT_DIR%ServidorScreenPanel"
-dotnet publish ServidorScreenPanel.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o "%OUTPUT_DIR%\Servidor"
+dotnet publish ServidorScreenPanel.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%OUTPUT_DIR%\Servidor"
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERRO] Falha ao publicar ServidorScreenPanel!
@@ -65,14 +65,24 @@ echo ============================================================
 echo            PUBLICAÇÃO CONCLUÍDA COM SUCESSO!
 echo ============================================================
 echo.
-echo Executáveis standalone criados em:
+echo Executáveis STANDALONE criados (NÃO precisam .NET instalado):
 echo.
 echo [Cliente]  Publicado\Cliente\ClienteScreen.exe
 echo [Servidor] Publicado\Servidor\ServidorScreenPanel.exe
 echo.
-echo Estes executáveis podem ser distribuídos sem instalar .NET!
+echo IMPORTANTE: Estes executáveis incluem o runtime .NET completo.
+echo             Podem ser executados em qualquer Windows SEM instalar .NET!
+echo.
+echo Tamanho aproximado: 60-80 MB cada
 echo.
 echo ============================================================
+
+REM Limpar arquivos desnecessários
+echo [INFO] Limpando arquivos temporários...
+del /Q "%OUTPUT_DIR%\Cliente\*.pdb" 2>nul
+del /Q "%OUTPUT_DIR%\Servidor\*.pdb" 2>nul
+echo [OK] Limpeza concluída!
+echo.
 
 REM Abre o explorador de arquivos na pasta de saída
 explorer "%OUTPUT_DIR%"
