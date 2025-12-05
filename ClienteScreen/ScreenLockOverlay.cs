@@ -243,88 +243,111 @@ public class ScreenLockOverlay
         {
             _parent = parent;
 
-            Console.WriteLine("[LOCK-FORM] Criando LockForm (overlay fullscreen)");
-
-            // Configurar form como overlay fullscreen
-            FormBorderStyle = FormBorderStyle.None;
-            WindowState = FormWindowState.Maximized;
-            TopMost = true;
-            ShowInTaskbar = false;
-            ControlBox = false;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            Text = "";
-            BackColor = Color.Black;
-            ForeColor = Color.White;
-            DoubleBuffered = true;
-            Opacity = 0;
-            KeyPreview = true;
-            AllowDrop = false;
-
-            // Prevenir que seja movido ou redimensionado
-            FormBorderStyle = FormBorderStyle.None;
-            StartPosition = FormStartPosition.Manual;
-            Location = new Point(0, 0);
-            Size = Screen.PrimaryScreen.Bounds.Size;
-
-            Console.WriteLine($"[LOCK-FORM] Form configurado: TopMost={TopMost}, Opacity={Opacity}, Enabled={Enabled}");
-
-            // Timer para animar transições
-            _updateTimer = new System.Windows.Forms.Timer();
-            _updateTimer.Interval = 50;
-            _updateTimer.Tick += UpdateTimer_Tick;
-            _updateTimer.Start();
-
-            // Timer para manter foco quando travado (força foco a cada 500ms)
-            _refocusTimer = new System.Windows.Forms.Timer();
-            _refocusTimer.Interval = 500;
-            _refocusTimer.Tick += RefocusTimer_Tick;
-            _refocusTimer.Start();
-
-            // Bloquear TODAS as teclas quando travado
-            KeyDown += (s, e) =>
+            try
             {
-                if (_parent.IsLocked)
-                {
-                    e.SuppressKeyPress = true;
-                    e.Handled = true;
-                    Console.WriteLine($"[LOCK-FORM] Bloqueou tecla: {e.KeyCode}");
-                }
-            };
+                Console.WriteLine("[LOCK-FORM] Criando LockForm (overlay fullscreen)");
 
-            KeyPress += (s, e) =>
-            {
-                if (_parent.IsLocked)
-                {
-                    e.Handled = true;
-                    Console.WriteLine($"[LOCK-FORM] Bloqueou KeyPress: {e.KeyChar}");
-                }
-            };
+                // Configurar form como overlay fullscreen
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Maximized;
+                TopMost = true;
+                ShowInTaskbar = false;
+                ControlBox = false;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                Text = "";
+                BackColor = Color.Black;
+                ForeColor = Color.White;
+                DoubleBuffered = true;
+                Opacity = 0;
+                KeyPreview = true;
+                AllowDrop = false;
 
-            KeyUp += (s, e) =>
-            {
-                if (_parent.IsLocked)
-                {
-                    e.Handled = true;
-                }
-            };
+                // Prevenir que seja movido ou redimensionado
+                FormBorderStyle = FormBorderStyle.None;
+                StartPosition = FormStartPosition.Manual;
+                Location = new Point(0, 0);
 
-            // Capturar TODOS os eventos do mouse
-            MouseDown += (s, e) =>
-            {
-                if (_parent.IsLocked)
+                // Tamanho: usar tela primária ou padrão se null
+                try
                 {
-                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseDown: {e.Button} em ({e.X}, {e.Y})");
+                    if (Screen.PrimaryScreen != null && Screen.PrimaryScreen.Bounds != null)
+                    {
+                        Size = Screen.PrimaryScreen.Bounds.Size;
+                        Console.WriteLine($"[LOCK-FORM] Tamanho definido: {Size.Width}x{Size.Height}");
+                    }
+                    else
+                    {
+                        Size = new Size(1920, 1080); // Tamanho padrão se tela não disponível
+                        Console.WriteLine("[LOCK-FORM] AVISO: PrimaryScreen null, usando tamanho padrão 1920x1080");
+                    }
                 }
-            };
-            MouseMove += (s, e) => { /* consumir silenciosamente */ };
-            MouseClick += (s, e) =>
-            {
-                if (_parent.IsLocked)
+                catch (Exception exScreen)
                 {
-                    Console.WriteLine($"[LOCK-FORM] Bloqueou MouseClick: {e.Button}");
+                    Size = new Size(1920, 1080);
+                    Console.WriteLine($"[LOCK-FORM] ERRO ao obter tamanho da tela: {exScreen.Message}");
                 }
-            };
+
+                Console.WriteLine($"[LOCK-FORM] Form configurado: TopMost={TopMost}, Opacity={Opacity}, Enabled={Enabled}");
+
+                // Timer para animar transições
+                _updateTimer = new System.Windows.Forms.Timer();
+                _updateTimer.Interval = 50;
+                _updateTimer.Tick += UpdateTimer_Tick;
+                _updateTimer.Start();
+                Console.WriteLine("[LOCK-FORM] UpdateTimer iniciado");
+
+                // Timer para manter foco quando travado (força foco a cada 500ms)
+                _refocusTimer = new System.Windows.Forms.Timer();
+                _refocusTimer.Interval = 500;
+                _refocusTimer.Tick += RefocusTimer_Tick;
+                _refocusTimer.Start();
+                Console.WriteLine("[LOCK-FORM] RefocusTimer iniciado");
+
+                // Bloquear TODAS as teclas quando travado
+                KeyDown += (s, e) =>
+                {
+                    if (_parent.IsLocked)
+                    {
+                        e.SuppressKeyPress = true;
+                        e.Handled = true;
+                        Console.WriteLine($"[LOCK-FORM] Bloqueou tecla: {e.KeyCode}");
+                    }
+                };
+
+                KeyPress += (s, e) =>
+                {
+                    if (_parent.IsLocked)
+                    {
+                        e.Handled = true;
+                        Console.WriteLine($"[LOCK-FORM] Bloqueou KeyPress: {e.KeyChar}");
+                    }
+                };
+
+                KeyUp += (s, e) =>
+                {
+                    if (_parent.IsLocked)
+                    {
+                        e.Handled = true;
+                    }
+                };
+
+                // Capturar TODOS os eventos do mouse
+                MouseDown += (s, e) =>
+                {
+                    if (_parent.IsLocked)
+                    {
+                        Console.WriteLine($"[LOCK-FORM] Bloqueou MouseDown: {e.Button} em ({e.X}, {e.Y})");
+                    }
+                };
+                MouseMove += (s, e) => { /* consumir silenciosamente */ };
+                MouseClick += (s, e) =>
+                {
+                    if (_parent.IsLocked)
+                    {
+                        Console.WriteLine($"[LOCK-FORM] Bloqueou MouseClick: {e.Button}");
+                    }
+                };
             MouseDoubleClick += (s, e) =>
             {
                 if (_parent.IsLocked)
@@ -368,6 +391,13 @@ public class ScreenLockOverlay
             };
 
             Console.WriteLine("[LOCK-FORM] LockForm criado com sucesso");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LOCK-FORM] ERRO FATAL ao criar LockForm: {ex.Message}");
+                Console.WriteLine($"[LOCK-FORM] Stack trace: {ex.StackTrace}");
+                throw; // Re-throw para que o erro seja capturado no UIThreadProc
+            }
         }
 
         private void RefocusTimer_Tick(object? sender, EventArgs e)
