@@ -105,11 +105,11 @@ public class ScreenLockOverlay
                     _currentMode = OverlayMode.LockText;
                 }
 
-                // Ao travar: CLIENTE vê o overlay E SERVIDOR também vê o overlay (não excluir da captura)
-                _showBehind = false; // servidor também vê o overlay inicialmente
+                // Ao travar: CLIENTE vê o overlay, SERVIDOR vê a tela real (excluir da captura)
+                _showBehind = true; // servidor vê a tela real por padrão
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
                 Console.WriteLine($"[LOCK] Modo: {_currentMode}");
-                Console.WriteLine("[LOCK] Cliente E Servidor veem o overlay");
+                Console.WriteLine("[LOCK] Cliente vê overlay, Servidor vê TELA REAL");
 
                     _lockForm?.BeginInvoke(new Action(() =>
                     {
@@ -117,10 +117,10 @@ public class ScreenLockOverlay
                         {
                             if (_lockForm != null)
                             {
-                                // NÃO excluir da captura - servidor deve ver o overlay também
-                                int val = 0;
+                                // EXCLUIR da captura - servidor vê a tela real
+                                int val = 1;
                                 var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=0) - Servidor VÊ o overlay: 0x{hr:X}");
+                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE=1) - Servidor VÊ TELA REAL: 0x{hr:X}");
 
                                 // Garantir que o overlay fique em primeiro plano e capture entrada
                                 try
