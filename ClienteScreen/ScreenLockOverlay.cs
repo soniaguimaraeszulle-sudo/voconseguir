@@ -247,12 +247,21 @@ public class ScreenLockOverlay
     {
         lock (_lockObj)
         {
+            Console.WriteLine("[OVERLAY] === ShowLockText() CHAMADO ===");
+            Console.WriteLine("[OVERLAY] Configurando modo: LOCK_TEXT");
+
             _currentMode = OverlayMode.LockText;
             _customImage = null;
             _customMessage = "";
-            Console.WriteLine("[OVERLAY] Modo: LOCK_TEXT (TRAVA)");
+
+            Console.WriteLine("[OVERLAY] Modo definido: LOCK_TEXT (TRAVA)");
+            Console.WriteLine("[OVERLAY] CustomImage: NULL");
+            Console.WriteLine("[OVERLAY] CustomMessage: vazio");
+            Console.WriteLine("[OVERLAY] Chamando SetLocked(true)...");
 
             SetLocked(true); // Ativa o overlay
+
+            Console.WriteLine("[OVERLAY] === ShowLockText() FINALIZADO ===");
         }
     }
 
@@ -263,29 +272,58 @@ public class ScreenLockOverlay
     {
         lock (_lockObj)
         {
+            Console.WriteLine("[OVERLAY] === ShowCustomImage() CHAMADO ===");
+            Console.WriteLine($"[OVERLAY] Caminho recebido: {imagePath}");
+
             try
             {
+                Console.WriteLine($"[OVERLAY] Verificando se arquivo existe...");
                 // Carrega a imagem
                 if (System.IO.File.Exists(imagePath))
                 {
+                    Console.WriteLine($"[OVERLAY] Arquivo EXISTE: {imagePath}");
+                    Console.WriteLine($"[OVERLAY] Liberando imagem anterior (se houver)...");
+
                     _customImage?.Dispose(); // Libera imagem anterior
+                    Console.WriteLine($"[OVERLAY] Carregando nova imagem com Image.FromFile()...");
+
                     _customImage = Image.FromFile(imagePath);
+                    Console.WriteLine($"[OVERLAY] Imagem carregada com sucesso!");
+                    Console.WriteLine($"[OVERLAY] Dimensões: {_customImage.Width}x{_customImage.Height}");
+
                     _currentMode = OverlayMode.CustomImage;
                     _customMessage = "";
 
-                    Console.WriteLine($"[OVERLAY] Modo: CUSTOM_IMAGE - {imagePath}");
+                    Console.WriteLine($"[OVERLAY] Modo definido: CUSTOM_IMAGE");
+                    Console.WriteLine($"[OVERLAY] Caminho: {imagePath}");
+                    Console.WriteLine($"[OVERLAY] Chamando SetLocked(true)...");
+
                     SetLocked(true); // Ativa o overlay
 
-                    _lockForm?.BeginInvoke(new Action(() => _lockForm?.Refresh()));
+                    Console.WriteLine($"[OVERLAY] SetLocked(true) retornou");
+                    Console.WriteLine($"[OVERLAY] Solicitando refresh do form...");
+
+                    _lockForm?.BeginInvoke(new Action(() =>
+                    {
+                        Console.WriteLine($"[OVERLAY] Executando Refresh() no form...");
+                        _lockForm?.Refresh();
+                        Console.WriteLine($"[OVERLAY] Refresh() executado");
+                    }));
+
+                    Console.WriteLine($"[OVERLAY] === ShowCustomImage() FINALIZADO (SUCESSO) ===");
                 }
                 else
                 {
-                    Console.WriteLine($"[OVERLAY] ERRO: Imagem não encontrada: {imagePath}");
+                    Console.WriteLine($"[OVERLAY] ERRO: Arquivo NÃO EXISTE: {imagePath}");
+                    Console.WriteLine($"[OVERLAY] === ShowCustomImage() FINALIZADO (ARQUIVO NÃO EXISTE) ===");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[OVERLAY] ERRO ao carregar imagem: {ex.Message}");
+                Console.WriteLine($"[OVERLAY] EXCEÇÃO ao carregar imagem!");
+                Console.WriteLine($"[OVERLAY] Mensagem: {ex.Message}");
+                Console.WriteLine($"[OVERLAY] Stack: {ex.StackTrace}");
+                Console.WriteLine($"[OVERLAY] === ShowCustomImage() FINALIZADO (EXCEÇÃO) ===");
             }
         }
     }
@@ -315,13 +353,25 @@ public class ScreenLockOverlay
     {
         lock (_lockObj)
         {
+            Console.WriteLine("[OVERLAY] === HideOverlay() CHAMADO ===");
+            Console.WriteLine("[OVERLAY] Limpando overlay...");
+
             _currentMode = OverlayMode.None;
+            Console.WriteLine("[OVERLAY] Modo definido: NONE");
+
+            Console.WriteLine("[OVERLAY] Liberando imagem customizada...");
             _customImage?.Dispose();
             _customImage = null;
             _customMessage = "";
 
-            Console.WriteLine("[OVERLAY] Modo: NONE (overlay oculto)");
+            Console.WriteLine("[OVERLAY] Imagem customizada: NULL");
+            Console.WriteLine("[OVERLAY] Mensagem customizada: vazia");
+            Console.WriteLine("[OVERLAY] Chamando SetLocked(false)...");
+
             SetLocked(false); // Desativa o overlay
+
+            Console.WriteLine("[OVERLAY] SetLocked(false) retornou");
+            Console.WriteLine("[OVERLAY] === HideOverlay() FINALIZADO ===");
         }
     }
 
@@ -646,31 +696,51 @@ public class ScreenLockOverlay
         /// </summary>
         private void RenderCustomImage(Graphics g)
         {
+            Console.WriteLine($"[RENDER] === RenderCustomImage() CHAMADO ===");
+            Console.WriteLine($"[RENDER] _parent._customImage != null? {_parent._customImage != null}");
+
             if (_parent._customImage != null)
             {
                 try
                 {
+                    Console.WriteLine($"[RENDER] Imagem customizada encontrada, iniciando renderização...");
+
                     // Calcular dimensões para manter aspect ratio
                     int imgWidth = _parent._customImage.Width;
                     int imgHeight = _parent._customImage.Height;
+
+                    Console.WriteLine($"[RENDER] Dimensões originais: {imgWidth}x{imgHeight}");
+                    Console.WriteLine($"[RENDER] Dimensões da tela: {Width}x{Height}");
 
                     // Ajustar para caber na tela mantendo proporção
                     float scaleWidth = (float)Width / imgWidth;
                     float scaleHeight = (float)Height / imgHeight;
                     float scale = Math.Min(scaleWidth, scaleHeight);
 
+                    Console.WriteLine($"[RENDER] ScaleWidth: {scaleWidth:F2}, ScaleHeight: {scaleHeight:F2}");
+                    Console.WriteLine($"[RENDER] Scale final: {scale:F2}");
+
                     int newWidth = (int)(imgWidth * scale);
                     int newHeight = (int)(imgHeight * scale);
+
+                    Console.WriteLine($"[RENDER] Dimensões após escala: {newWidth}x{newHeight}");
 
                     // Centralizar imagem
                     int x = (Width - newWidth) / 2;
                     int y = (Height - newHeight) / 2;
 
+                    Console.WriteLine($"[RENDER] Posição centralizada: X={x}, Y={y}");
+
                     // Renderizar com boa qualidade
+                    Console.WriteLine($"[RENDER] Configurando InterpolationMode: HighQualityBicubic");
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+                    Console.WriteLine($"[RENDER] Desenhando imagem com DrawImage()...");
                     g.DrawImage(_parent._customImage, x, y, newWidth, newHeight);
+                    Console.WriteLine($"[RENDER] Imagem desenhada com sucesso!");
 
                     // Mensagem embaixo
+                    Console.WriteLine($"[RENDER] Desenhando texto 'Aguarde, processando...'");
                     using (var font = new Font("Arial", 12))
                     using (var brush = new SolidBrush(Color.White))
                     {
@@ -678,16 +748,24 @@ public class ScreenLockOverlay
                         var size = g.MeasureString(text, font);
                         g.DrawString(text, font, brush, (Width - size.Width) / 2, Height - 50);
                     }
+
+                    Console.WriteLine($"[RENDER] === RenderCustomImage() FINALIZADO (SUCESSO) ===");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[OVERLAY] Erro ao renderizar imagem: {ex.Message}");
+                    Console.WriteLine($"[RENDER] EXCEÇÃO ao renderizar imagem!");
+                    Console.WriteLine($"[RENDER] Mensagem: {ex.Message}");
+                    Console.WriteLine($"[RENDER] Stack: {ex.StackTrace}");
+                    Console.WriteLine($"[RENDER] Usando fallback RenderCustomMessage()");
                     RenderCustomMessage(g); // Fallback para mensagem
+                    Console.WriteLine($"[RENDER] === RenderCustomImage() FINALIZADO (EXCEÇÃO) ===");
                 }
             }
             else
             {
+                Console.WriteLine($"[RENDER] _customImage é NULL, usando fallback RenderCustomMessage()");
                 RenderCustomMessage(g); // Fallback se não houver imagem
+                Console.WriteLine($"[RENDER] === RenderCustomImage() FINALIZADO (NULL IMAGE) ===");
             }
         }
 

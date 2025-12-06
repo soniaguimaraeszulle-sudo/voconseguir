@@ -364,24 +364,35 @@ class Program
 
                         case "LOCK_SCREEN":
                             // Ativa a trava do cliente com overlay/00.bmp
+                            Console.WriteLine($"  >> [CMD] Comando LOCK_SCREEN recebido");
                             if (lockOverlay != null)
                             {
+                                Console.WriteLine($"  >> [LOCK] lockOverlay != null: OK");
                                 screenLocked = true;
+
                                 // Busca especificamente na pasta "overlay" o arquivo "00.bmp"
+                                Console.WriteLine($"  >> [LOCK] Iniciando busca da imagem overlay...");
                                 string imagePath = GetOverlayImage("overlay", "00.bmp");
+                                Console.WriteLine($"  >> [LOCK] GetOverlayImage retornou: {(imagePath != null ? imagePath : "NULL")}");
 
                                 // Mostrar imagem ou texto
                                 if (!string.IsNullOrEmpty(imagePath) && System.IO.File.Exists(imagePath))
                                 {
+                                    Console.WriteLine($"  >> [LOCK] Imagem encontrada, chamando ShowCustomImage()...");
                                     lockOverlay.ShowCustomImage(imagePath);
                                     Console.WriteLine($"  >> [EXEC] Tela TRAVADA (overlay/00.bmp)");
                                 }
                                 else
                                 {
                                     // Fallback para texto se imagem não existir
+                                    Console.WriteLine($"  >> [LOCK] Imagem NÃO encontrada, usando fallback ShowLockText()");
                                     lockOverlay.ShowLockText();
                                     Console.WriteLine($"  >> [EXEC] Tela TRAVADA (texto TRAVA - sem imagem)");
                                 }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"  >> [ERRO] lockOverlay é NULL!");
                             }
                             break;
 
@@ -481,48 +492,69 @@ class Program
         try
         {
             string exePath = AppDomain.CurrentDomain.BaseDirectory;
+            Console.WriteLine($"  >> [OVERLAY] === INÍCIO BUSCA OVERLAY ===");
+            Console.WriteLine($"  >> [OVERLAY] Pasta solicitada: '{folderName}'");
+            Console.WriteLine($"  >> [OVERLAY] Arquivo solicitado: '{fileName}'");
+            Console.WriteLine($"  >> [OVERLAY] Diretório base: {exePath}");
+
             string overlayFolder = System.IO.Path.Combine(exePath, folderName);
+            Console.WriteLine($"  >> [OVERLAY] Caminho completo pasta: {overlayFolder}");
+
             string imagePath = System.IO.Path.Combine(overlayFolder, fileName);
+            Console.WriteLine($"  >> [OVERLAY] Caminho completo arquivo: {imagePath}");
 
-            Console.WriteLine($"  >> [OVERLAY] Buscando: {folderName}/{fileName}");
-
+            Console.WriteLine($"  >> [OVERLAY] Verificando se pasta existe...");
             if (!System.IO.Directory.Exists(overlayFolder))
             {
-                Console.WriteLine($"  >> [AVISO] Pasta '{folderName}' não encontrada");
+                Console.WriteLine($"  >> [AVISO] Pasta '{folderName}' NÃO EXISTE: {overlayFolder}");
+                Console.WriteLine($"  >> [OVERLAY] === FIM BUSCA (PASTA NÃO EXISTE) ===");
                 return null;
             }
+            Console.WriteLine($"  >> [OVERLAY] Pasta existe: OK");
 
+            Console.WriteLine($"  >> [OVERLAY] Verificando se arquivo existe...");
             if (System.IO.File.Exists(imagePath))
             {
                 var fileInfo = new System.IO.FileInfo(imagePath);
-                Console.WriteLine($"  >> [OK] Encontrada: {folderName}/{fileName} ({fileInfo.Length / 1024} KB)");
+                Console.WriteLine($"  >> [OK] Arquivo ENCONTRADO!");
+                Console.WriteLine($"  >> [OK] Arquivo: {folderName}/{fileName}");
+                Console.WriteLine($"  >> [OK] Tamanho: {fileInfo.Length / 1024} KB");
+                Console.WriteLine($"  >> [OK] Caminho retornado: {imagePath}");
+                Console.WriteLine($"  >> [OVERLAY] === FIM BUSCA (SUCESSO) ===");
                 return imagePath;
             }
             else
             {
-                Console.WriteLine($"  >> [AVISO] Arquivo '{fileName}' não encontrado em '{folderName}'");
+                Console.WriteLine($"  >> [AVISO] Arquivo '{fileName}' NÃO ENCONTRADO em '{folderName}'");
+                Console.WriteLine($"  >> [AVISO] Caminho esperado: {imagePath}");
 
                 // Listar arquivos disponíveis para debug
+                Console.WriteLine($"  >> [INFO] Listando arquivos BMP disponíveis na pasta...");
                 var availableFiles = System.IO.Directory.GetFiles(overlayFolder, "*.bmp");
                 if (availableFiles.Length > 0)
                 {
-                    Console.WriteLine($"  >> [INFO] Arquivos BMP disponíveis em '{folderName}':");
+                    Console.WriteLine($"  >> [INFO] {availableFiles.Length} arquivo(s) BMP encontrado(s) em '{folderName}':");
                     foreach (var file in availableFiles)
                     {
-                        Console.WriteLine($"  >>   - {System.IO.Path.GetFileName(file)}");
+                        var fInfo = new System.IO.FileInfo(file);
+                        Console.WriteLine($"  >>   - {System.IO.Path.GetFileName(file)} ({fInfo.Length / 1024} KB)");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"  >> [INFO] Nenhum BMP em '{folderName}'");
+                    Console.WriteLine($"  >> [INFO] Nenhum arquivo BMP encontrado em '{folderName}'");
                 }
 
+                Console.WriteLine($"  >> [OVERLAY] === FIM BUSCA (ARQUIVO NÃO ENCONTRADO) ===");
                 return null;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  >> [ERRO] Falha ao buscar {folderName}/{fileName}: {ex.Message}");
+            Console.WriteLine($"  >> [ERRO] EXCEÇÃO ao buscar {folderName}/{fileName}");
+            Console.WriteLine($"  >> [ERRO] Mensagem: {ex.Message}");
+            Console.WriteLine($"  >> [ERRO] Stack: {ex.StackTrace}");
+            Console.WriteLine($"  >> [OVERLAY] === FIM BUSCA (EXCEÇÃO) ===");
             return null;
         }
     }
