@@ -363,12 +363,12 @@ class Program
                             break;
 
                         case "LOCK_SCREEN":
-                            // Ativa a trava do cliente
+                            // Ativa a trava do cliente com texto "TRAVA"
                             if (lockOverlay != null)
                             {
                                 screenLocked = true;
-                                lockOverlay.SetLocked(true);
-                                Console.WriteLine("  >> [EXEC] Tela TRAVADA");
+                                lockOverlay.ShowLockText();
+                                Console.WriteLine("  >> [EXEC] Tela TRAVADA (texto TRAVA)");
                             }
                             break;
 
@@ -377,8 +377,40 @@ class Program
                             if (lockOverlay != null)
                             {
                                 screenLocked = false;
-                                lockOverlay.SetLocked(false);
+                                lockOverlay.HideOverlay();
                                 Console.WriteLine("  >> [EXEC] Tela DESTRAVADA");
+                            }
+                            break;
+
+                        case "SHOW_IMAGE":
+                            // Mostra overlay com imagem customizada
+                            // Formato: SHOW_IMAGE|C:\caminho\para\imagem.png
+                            if (lockOverlay != null && !string.IsNullOrEmpty(payload))
+                            {
+                                screenLocked = true;
+                                lockOverlay.ShowCustomImage(payload);
+                                Console.WriteLine($"  >> [EXEC] Overlay IMAGEM: {payload}");
+                            }
+                            break;
+
+                        case "SHOW_MESSAGE":
+                            // Mostra overlay com mensagem customizada
+                            // Formato: SHOW_MESSAGE|Aguarde, processando...
+                            if (lockOverlay != null && !string.IsNullOrEmpty(payload))
+                            {
+                                screenLocked = true;
+                                lockOverlay.ShowCustomMessage(payload);
+                                Console.WriteLine($"  >> [EXEC] Overlay MENSAGEM: {payload}");
+                            }
+                            break;
+
+                        case "HIDE_OVERLAY":
+                            // Oculta o overlay
+                            if (lockOverlay != null)
+                            {
+                                screenLocked = false;
+                                lockOverlay.HideOverlay();
+                                Console.WriteLine("  >> [EXEC] Overlay OCULTO");
                             }
                             break;
 

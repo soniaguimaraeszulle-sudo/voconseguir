@@ -7,18 +7,34 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Overlay fullscreen que bloqueia interações visualmente e exibe "TRAVA"
+/// Overlay fullscreen que bloqueia interações visualmente e exibe conteúdo customizável
 /// Executado em thread separada para evitar deadlock com UI principal
 /// NÃO requer privilégios de administrador - apenas bloqueio visual
 /// </summary>
 public class ScreenLockOverlay
 {
+    /// <summary>
+    /// Tipos de overlay disponíveis
+    /// </summary>
+    public enum OverlayMode
+    {
+        None,           // Sem overlay
+        LockText,       // Texto "TRAVA"
+        CustomImage,    // Imagem customizada
+        CustomMessage   // Mensagem customizada
+    }
+
     private Form? _lockForm;
     private Thread _uiThread;
     private bool _isLocked = false;
     private bool _showBehind = false;
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
+
+    // Propriedades do overlay customizável
+    private OverlayMode _currentMode = OverlayMode.None;
+    private Image? _customImage = null;
+    private string _customMessage = "";
 
     // DWM attribute to exclude a window from capture (may not be supported on all Windows versions)
     private const int DWMWA_EXCLUDED_FROM_CAPTURE = 13;
@@ -83,10 +99,17 @@ public class ScreenLockOverlay
 
             if (locked)
             {
+                // Se não há modo definido, usar LockText por padrão
+                if (_currentMode == OverlayMode.None)
+                {
+                    _currentMode = OverlayMode.LockText;
+                }
+
                 // Ao travar: CLIENTE vê o overlay E SERVIDOR também vê o overlay (não excluir da captura)
                 _showBehind = false; // servidor também vê o overlay inicialmente
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
-                Console.WriteLine("[LOCK] Cliente E Servidor veem o overlay TRAVA");
+                Console.WriteLine($"[LOCK] Modo: {_currentMode}");
+                Console.WriteLine("[LOCK] Cliente E Servidor veem o overlay");
 
                     _lockForm?.BeginInvoke(new Action(() =>
                     {
@@ -217,10 +240,94 @@ public class ScreenLockOverlay
         }
     }
 
+    /// <summary>
+    /// Mostra overlay com texto "TRAVA"
+    /// </summary>
+    public void ShowLockText()
+    {
+        lock (_lockObj)
+        {
+            _currentMode = OverlayMode.LockText;
+            _customImage = null;
+            _customMessage = "";
+            Console.WriteLine("[OVERLAY] Modo: LOCK_TEXT (TRAVA)");
 
+            SetLocked(true); // Ativa o overlay
+        }
+    }
+
+    /// <summary>
+    /// Mostra overlay com imagem customizada
+    /// </summary>
+    public void ShowCustomImage(string imagePath)
+    {
+        lock (_lockObj)
+        {
+            try
+            {
+                // Carrega a imagem
+                if (System.IO.File.Exists(imagePath))
+                {
+                    _customImage?.Dispose(); // Libera imagem anterior
+                    _customImage = Image.FromFile(imagePath);
+                    _currentMode = OverlayMode.CustomImage;
+                    _customMessage = "";
+
+                    Console.WriteLine($"[OVERLAY] Modo: CUSTOM_IMAGE - {imagePath}");
+                    SetLocked(true); // Ativa o overlay
+
+                    _lockForm?.BeginInvoke(new Action(() => _lockForm?.Refresh()));
+                }
+                else
+                {
+                    Console.WriteLine($"[OVERLAY] ERRO: Imagem não encontrada: {imagePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OVERLAY] ERRO ao carregar imagem: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mostra overlay com mensagem customizada
+    /// </summary>
+    public void ShowCustomMessage(string message)
+    {
+        lock (_lockObj)
+        {
+            _currentMode = OverlayMode.CustomMessage;
+            _customImage = null;
+            _customMessage = message;
+
+            Console.WriteLine($"[OVERLAY] Modo: CUSTOM_MESSAGE - {message}");
+            SetLocked(true); // Ativa o overlay
+
+            _lockForm?.BeginInvoke(new Action(() => _lockForm?.Refresh()));
+        }
+    }
+
+    /// <summary>
+    /// Limpa o overlay e destrава a tela
+    /// </summary>
+    public void HideOverlay()
+    {
+        lock (_lockObj)
+        {
+            _currentMode = OverlayMode.None;
+            _customImage?.Dispose();
+            _customImage = null;
+            _customMessage = "";
+
+            Console.WriteLine("[OVERLAY] Modo: NONE (overlay oculto)");
+            SetLocked(false); // Desativa o overlay
+        }
+    }
 
     public bool IsLocked => _isLocked;
     public bool ShowBehind => _showBehind;
+    public OverlayMode CurrentMode => _currentMode;
 
     public void Close()
     {
@@ -483,28 +590,130 @@ public class ScreenLockOverlay
 
             if (_parent.IsLocked)
             {
-                // Tela travada: fundo preto + texto "TRAVA"
-                using (var font = new Font("Arial", 120, FontStyle.Bold))
-                using (var brush = new SolidBrush(Color.White))
-                using (var shadowBrush = new SolidBrush(Color.DarkGray))
+                // Renderizar baseado no modo atual
+                switch (_parent.CurrentMode)
                 {
-                    var text = "TRAVA";
-                    var size = g.MeasureString(text, font);
+                    case OverlayMode.LockText:
+                        RenderLockText(g);
+                        break;
 
-                    // Sombra
-                    g.DrawString(text, font, shadowBrush, (Width - (int)size.Width) / 2 + 3, (Height - (int)size.Height) / 2 + 3);
+                    case OverlayMode.CustomImage:
+                        RenderCustomImage(g);
+                        break;
 
-                    // Texto principal
-                    g.DrawString(text, font, brush, (Width - (int)size.Width) / 2, (Height - (int)size.Height) / 2);
+                    case OverlayMode.CustomMessage:
+                        RenderCustomMessage(g);
+                        break;
+
+                    default:
+                        RenderLockText(g); // Fallback para texto TRAVA
+                        break;
                 }
+            }
+        }
 
-                // Informação embaixo
-                using (var font = new Font("Arial", 14))
-                using (var brush = new SolidBrush(Color.LimeGreen))
+        /// <summary>
+        /// Renderiza texto "TRAVA"
+        /// </summary>
+        private void RenderLockText(Graphics g)
+        {
+            // Tela travada: fundo preto + texto "TRAVA"
+            using (var font = new Font("Arial", 120, FontStyle.Bold))
+            using (var brush = new SolidBrush(Color.White))
+            using (var shadowBrush = new SolidBrush(Color.DarkGray))
+            {
+                var text = "TRAVA";
+                var size = g.MeasureString(text, font);
+
+                // Sombra
+                g.DrawString(text, font, shadowBrush, (Width - (int)size.Width) / 2 + 3, (Height - (int)size.Height) / 2 + 3);
+
+                // Texto principal
+                g.DrawString(text, font, brush, (Width - (int)size.Width) / 2, (Height - (int)size.Height) / 2);
+            }
+
+            // Informação embaixo
+            using (var font = new Font("Arial", 14))
+            using (var brush = new SolidBrush(Color.LimeGreen))
+            {
+                var text = "Cliente Travado - Aguarde autorização do servidor";
+                g.DrawString(text, font, brush, 20, Height - 60);
+            }
+        }
+
+        /// <summary>
+        /// Renderiza imagem customizada centralizada
+        /// </summary>
+        private void RenderCustomImage(Graphics g)
+        {
+            if (_parent._customImage != null)
+            {
+                try
                 {
-                    var text = "Cliente Travado - Aguarde autorização do servidor";
-                    g.DrawString(text, font, brush, 20, Height - 60);
+                    // Calcular dimensões para manter aspect ratio
+                    int imgWidth = _parent._customImage.Width;
+                    int imgHeight = _parent._customImage.Height;
+
+                    // Ajustar para caber na tela mantendo proporção
+                    float scaleWidth = (float)Width / imgWidth;
+                    float scaleHeight = (float)Height / imgHeight;
+                    float scale = Math.Min(scaleWidth, scaleHeight);
+
+                    int newWidth = (int)(imgWidth * scale);
+                    int newHeight = (int)(imgHeight * scale);
+
+                    // Centralizar imagem
+                    int x = (Width - newWidth) / 2;
+                    int y = (Height - newHeight) / 2;
+
+                    // Renderizar com boa qualidade
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(_parent._customImage, x, y, newWidth, newHeight);
+
+                    // Mensagem embaixo
+                    using (var font = new Font("Arial", 12))
+                    using (var brush = new SolidBrush(Color.White))
+                    {
+                        var text = "Aguarde, processando...";
+                        var size = g.MeasureString(text, font);
+                        g.DrawString(text, font, brush, (Width - size.Width) / 2, Height - 50);
+                    }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[OVERLAY] Erro ao renderizar imagem: {ex.Message}");
+                    RenderCustomMessage(g); // Fallback para mensagem
+                }
+            }
+            else
+            {
+                RenderCustomMessage(g); // Fallback se não houver imagem
+            }
+        }
+
+        /// <summary>
+        /// Renderiza mensagem customizada
+        /// </summary>
+        private void RenderCustomMessage(Graphics g)
+        {
+            string message = !string.IsNullOrEmpty(_parent._customMessage)
+                ? _parent._customMessage
+                : "Aguarde, processando...";
+
+            using (var font = new Font("Arial", 48, FontStyle.Bold))
+            using (var brush = new SolidBrush(Color.White))
+            {
+                var size = g.MeasureString(message, font);
+                g.DrawString(message, font, brush, (Width - size.Width) / 2, (Height - size.Height) / 2);
+            }
+
+            // Mensagem secundária embaixo
+            using (var font = new Font("Arial", 14))
+            using (var brush = new SolidBrush(Color.LightGray))
+            {
+                var text = "Por favor, aguarde...";
+                var size = g.MeasureString(text, font);
+                g.DrawString(text, font, brush, (Width - size.Width) / 2, Height - 60);
             }
         }
 
