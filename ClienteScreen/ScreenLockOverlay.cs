@@ -290,7 +290,6 @@ public class ScreenLockOverlay
             base.OnPaint(e);
 
             var g = e.Graphics;
-            g.Clear(Color.Black);
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity={Opacity:F2}, Enabled={Enabled}");
@@ -298,6 +297,7 @@ public class ScreenLockOverlay
             // Se não está travado e opacity é baixa, não renderizar nada
             if (!_parent.IsLocked && Opacity < 0.1)
             {
+                g.Clear(Color.Black);
                 Console.WriteLine("[LOCK-PAINT] Não renderizando (não travado)");
                 return;
             }
@@ -305,28 +305,66 @@ public class ScreenLockOverlay
             if (_parent.IsLocked)
             {
                 Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA (cliente vê isto sempre)");
-                // Tela travada: fundo preto + texto "TRAVA" - SEMPRE renderizar quando IsLocked
+
+                // Desenhar fundo xadrez preto e branco
+                int squareSize = 40; // tamanho de cada quadrado do xadrez
+                for (int y = 0; y < Height; y += squareSize)
+                {
+                    for (int x = 0; x < Width; x += squareSize)
+                    {
+                        // Alterna entre preto e branco baseado na posição
+                        bool isBlack = ((x / squareSize) + (y / squareSize)) % 2 == 0;
+                        using (var brush = new SolidBrush(isBlack ? Color.Black : Color.White))
+                        {
+                            g.FillRectangle(brush, x, y, squareSize, squareSize);
+                        }
+                    }
+                }
+
+                // Texto "TRAVA" com fundo semi-transparente para melhor legibilidade
                 using (var font = new Font("Arial", 120, FontStyle.Bold))
-                using (var brush = new SolidBrush(Color.White))
-                using (var shadowBrush = new SolidBrush(Color.DarkGray))
                 {
                     var text = "TRAVA";
                     var size = g.MeasureString(text, font);
+                    int textX = (Width - (int)size.Width) / 2;
+                    int textY = (Height - (int)size.Height) / 2;
+
+                    // Fundo semi-transparente atrás do texto
+                    using (var bgBrush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))
+                    {
+                        g.FillRectangle(bgBrush, textX - 20, textY - 20, (int)size.Width + 40, (int)size.Height + 40);
+                    }
 
                     // Sombra
-                    g.DrawString(text, font, shadowBrush, (Width - (int)size.Width) / 2 + 3, (Height - (int)size.Height) / 2 + 3);
+                    using (var shadowBrush = new SolidBrush(Color.DarkGray))
+                    {
+                        g.DrawString(text, font, shadowBrush, textX + 3, textY + 3);
+                    }
 
-                    // Texto principal
-                    g.DrawString(text, font, brush, (Width - (int)size.Width) / 2, (Height - (int)size.Height) / 2);
+                    // Texto principal em vermelho para destaque
+                    using (var brush = new SolidBrush(Color.Red))
+                    {
+                        g.DrawString(text, font, brush, textX, textY);
+                    }
                     Console.WriteLine("[LOCK-PAINT] Texto TRAVA desenhado");
                 }
 
-                // Informação embaixo
+                // Informação embaixo com fundo
                 using (var font = new Font("Arial", 14))
-                using (var brush = new SolidBrush(Color.LimeGreen))
                 {
                     var text = "Cliente Travado";
-                    g.DrawString(text, font, brush, 20, Height - 60);
+                    var textSize = g.MeasureString(text, font);
+
+                    // Fundo preto atrás do texto
+                    using (var bgBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
+                    {
+                        g.FillRectangle(bgBrush, 10, Height - 70, textSize.Width + 20, 30);
+                    }
+
+                    using (var brush = new SolidBrush(Color.LimeGreen))
+                    {
+                        g.DrawString(text, font, brush, 20, Height - 60);
+                    }
                 }
             }
         }

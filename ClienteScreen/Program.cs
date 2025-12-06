@@ -163,51 +163,24 @@ class Program
 
             Console.WriteLine($"Enviando tela ({targetFps} FPS). Ctrl+C para parar.");
 
-            byte[]? lastSentJpeg = null;
-            int lastSentWidth = lastWidth, lastSentHeight = lastHeight;
-
             while (!cts.Token.IsCancellationRequested)
             {
                 try
                 {
-                    bool forceLive = true;
-                    if (lockOverlay != null)
-                    {
-                        // Quando travado, enviar frames ao vivo para o servidor controlar
-                        if (lockOverlay.IsLocked)
-                        {
-                            // ShowBehind agora sempre true quando travado (servidor sempre vê e controla)
-                            forceLive = true;
-                        }
-                    }
-
+                    // Quando travado: o overlay é excluído da captura pelo DwmSetWindowAttribute
+                    // Sempre enviar frames ao vivo para o servidor ver o desktop real
                     byte[] jpeg;
                     int width, height;
 
-                    if (!forceLive && lastSentJpeg != null && lastSentJpeg.Length > 0)
-                    {
-                        // Enviar frame congelado
-                        jpeg = lastSentJpeg;
-                        width = lastSentWidth;
-                        height = lastSentHeight;
-                        Console.WriteLine("[LOCK-SEND] Enviando frame congelado (trava ativa)");
-                    }
-                    else
-                    {
-                        using var capturer = new DesktopDuplicationCapturer(currentMonitor);
-                        jpeg = capturer.CaptureFrameJpeg(out width, out height);
+                    // Sempre capturar frame ao vivo
+                    // O overlay é excluído da captura pelo DwmSetWindowAttribute
+                    using var capturer = new DesktopDuplicationCapturer(currentMonitor);
+                    jpeg = capturer.CaptureFrameJpeg(out width, out height);
 
-                        if (jpeg.Length == 0)
-                        {
-                            await Task.Delay(frameInterval, cts.Token);
-                            continue;
-                        }
-
-                        // atualizar último frame enviado
-                        lastSentJpeg = jpeg;
-                        lastSentWidth = width;
-                        lastSentHeight = height;
-                        Console.WriteLine("[LOCK-SEND] Enviando frame ao vivo");
+                    if (jpeg.Length == 0)
+                    {
+                        await Task.Delay(frameInterval, cts.Token);
+                        continue;
                     }
 
                     lastWidth = width;
