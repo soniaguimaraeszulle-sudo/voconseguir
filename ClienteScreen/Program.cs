@@ -358,7 +358,21 @@ class Program
                             {
                                 screenLocked = true;
                                 lockOverlay.SetLocked(true);
-                                Console.WriteLine("  >> [EXEC] Tela TRAVADA");
+
+                                // DESABILITAR controle remoto quando travar
+                                // (servidor vê tela congelada, não pode controlar às cegas)
+                                if (keyboardEnabled)
+                                {
+                                    keyboardEnabled = false;
+                                    Console.WriteLine("  >> [LOCK] Teclado remoto DESABILITADO (trava ativa)");
+                                }
+                                if (mouseEnabled)
+                                {
+                                    mouseEnabled = false;
+                                    Console.WriteLine("  >> [LOCK] Mouse remoto DESABILITADO (trava ativa)");
+                                }
+
+                                Console.WriteLine("  >> [EXEC] Tela TRAVADA (controle remoto desabilitado)");
                             }
                             break;
 
