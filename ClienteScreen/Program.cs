@@ -140,6 +140,9 @@ class Program
         {
             lockOverlay = new ScreenLockOverlay();
             Console.WriteLine("[LOCK] Overlay de trava inicializado");
+
+            // Criar pasta overlayplanta e imagem se não existir
+            InitializeOverlayImages();
         }
         catch (Exception ex)
         {
@@ -363,12 +366,24 @@ class Program
                             break;
 
                         case "LOCK_SCREEN":
-                            // Ativa a trava do cliente com texto "TRAVA"
+                            // Ativa a trava do cliente com imagem da Rosa do Deserto
                             if (lockOverlay != null)
                             {
                                 screenLocked = true;
-                                lockOverlay.ShowLockText();
-                                Console.WriteLine("  >> [EXEC] Tela TRAVADA (texto TRAVA)");
+
+                                // Verificar se existe a imagem da rosa do deserto
+                                string rosaImagePath = @"C:\overlayplanta\00.bmp";
+                                if (System.IO.File.Exists(rosaImagePath))
+                                {
+                                    lockOverlay.ShowCustomImage(rosaImagePath);
+                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (imagem Rosa do Deserto)");
+                                }
+                                else
+                                {
+                                    // Fallback para texto se imagem não existir
+                                    lockOverlay.ShowLockText();
+                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (texto TRAVA - imagem não encontrada)");
+                                }
                             }
                             break;
 
@@ -455,5 +470,47 @@ class Program
         catch { }
 
         Console.WriteLine("Cliente finalizado.");
+    }
+
+    /// <summary>
+    /// Inicializa a pasta overlayplanta
+    /// </summary>
+    static void InitializeOverlayImages()
+    {
+        try
+        {
+            // Caminho da pasta (na raiz C:)
+            string folderPath = @"C:\overlayplanta";
+            string imagePath = System.IO.Path.Combine(folderPath, "00.bmp");
+
+            Console.WriteLine("[OVERLAY-INIT] Verificando pasta de overlays...");
+
+            // Criar pasta se não existir
+            if (!System.IO.Directory.Exists(folderPath))
+            {
+                System.IO.Directory.CreateDirectory(folderPath);
+                Console.WriteLine($"[OVERLAY-INIT] ✓ Pasta criada: {folderPath}");
+            }
+            else
+            {
+                Console.WriteLine($"[OVERLAY-INIT] ✓ Pasta encontrada: {folderPath}");
+            }
+
+            // Verificar se imagem existe
+            if (System.IO.File.Exists(imagePath))
+            {
+                Console.WriteLine($"[OVERLAY-INIT] ✓ Imagem encontrada: 00.bmp");
+            }
+            else
+            {
+                Console.WriteLine($"[OVERLAY-INIT] ! AVISO: Imagem não encontrada em {imagePath}");
+                Console.WriteLine($"[OVERLAY-INIT] ! Adicione a imagem 00.bmp (642x484, 24-bit BMP) na pasta");
+                Console.WriteLine($"[OVERLAY-INIT] ! Se não houver imagem, será mostrado texto TRAVA");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OVERLAY-INIT] ERRO ao inicializar overlays: {ex.Message}");
+        }
     }
 }

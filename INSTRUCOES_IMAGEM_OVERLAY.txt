@@ -1,0 +1,153 @@
+═══════════════════════════════════════════════════════════════════
+  INSTRUÇÕES - Como Adicionar Imagem de Rosa do Deserto no Overlay
+═══════════════════════════════════════════════════════════════════
+
+📁 LOCALIZAÇÃO DA PASTA:
+   C:\overlayplanta\
+
+📄 NOME DO ARQUIVO:
+   00.bmp
+
+📐 ESPECIFICAÇÕES DA IMAGEM:
+   - Largura: 642 pixels
+   - Altura: 484 pixels
+   - Formato: BMP (Bitmap)
+   - Intensidade de bits: 24-bit
+   - Tipo de item: Arquivo BMP
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 PASSO A PASSO:
+
+1. A pasta C:\overlayplanta\ será criada automaticamente quando o
+   ClienteScreen.exe iniciar pela primeira vez.
+
+2. Copie ou salve sua imagem de Rosa do Deserto com o nome exato:
+   00.bmp
+
+3. Cole a imagem na pasta:
+   C:\overlayplanta\00.bmp
+
+4. Certifique-se que a imagem tem as dimensões corretas:
+   - 642 x 484 pixels
+   - Formato BMP 24-bit
+
+═══════════════════════════════════════════════════════════════════
+
+💡 COMO CONVERTER UMA IMAGEM PARA AS ESPECIFICAÇÕES CORRETAS:
+
+Usando o Paint do Windows:
+1. Abra sua imagem no Paint
+2. Vá em "Redimensionar" → Digite 642 de largura e 484 de altura
+3. Vá em "Arquivo" → "Salvar como" → "Imagem BMP"
+4. Escolha "BMP 24 bits"
+5. Salve como: C:\overlayplanta\00.bmp
+
+Usando software profissional (Photoshop, GIMP, etc.):
+1. Abra a imagem
+2. Redimensione para 642x484 pixels
+3. Exporte/Salve como BMP, 24-bit
+4. Salve em: C:\overlayplanta\00.bmp
+
+═══════════════════════════════════════════════════════════════════
+
+✅ FUNCIONAMENTO:
+
+Quando o SERVIDOR clicar em "Trava":
+  - Cliente verifica se C:\overlayplanta\00.bmp existe
+  - Se EXISTE → Mostra a imagem da Rosa do Deserto em tela cheia
+  - Se NÃO EXISTE → Mostra texto "TRAVA" (fallback)
+
+O SERVIDOR sempre verá a tela real (CopyFromScreen), independente
+do overlay mostrado ao usuário.
+
+═══════════════════════════════════════════════════════════════════
+
+📋 LOGS DO CLIENTE:
+
+Na inicialização, você verá:
+
+  ✓ SE A IMAGEM EXISTIR:
+    [OVERLAY-INIT] Verificando pasta de overlays...
+    [OVERLAY-INIT] ✓ Pasta encontrada: C:\overlayplanta
+    [OVERLAY-INIT] ✓ Imagem encontrada: 00.bmp
+
+  ⚠ SE A IMAGEM NÃO EXISTIR:
+    [OVERLAY-INIT] Verificando pasta de overlays...
+    [OVERLAY-INIT] ✓ Pasta criada: C:\overlayplanta
+    [OVERLAY-INIT] ! AVISO: Imagem não encontrada em C:\overlayplanta\00.bmp
+    [OVERLAY-INIT] ! Adicione a imagem 00.bmp (642x484, 24-bit BMP) na pasta
+    [OVERLAY-INIT] ! Se não houver imagem, será mostrado texto TRAVA
+
+Quando o servidor clicar em "Trava":
+
+  ✓ COM IMAGEM:
+    Comando do servidor: LOCK_SCREEN |
+    >> [EXEC] Tela TRAVADA (imagem Rosa do Deserto)
+
+  ⚠ SEM IMAGEM:
+    Comando do servidor: LOCK_SCREEN |
+    >> [EXEC] Tela TRAVADA (texto TRAVA - imagem não encontrada)
+
+═══════════════════════════════════════════════════════════════════
+
+🎨 DICAS DE DESIGN:
+
+Para melhor visualização:
+- Use imagem de alta qualidade da Rosa do Deserto
+- Prefira fotos com fundo neutro ou desfocado
+- A imagem será centralizada e ajustada mantendo proporções
+- Fundo preto ao redor da imagem (se não ocupar tela toda)
+
+═══════════════════════════════════════════════════════════════════
+
+🔄 SUBSTITUIR IMAGEM:
+
+Para trocar a imagem:
+1. Feche o ClienteScreen.exe (se estiver rodando)
+2. Substitua C:\overlayplanta\00.bmp pela nova imagem
+3. Certifique-se que mantém o mesmo nome: 00.bmp
+4. Inicie o ClienteScreen.exe novamente
+
+Ou:
+1. Mantenha o ClienteScreen.exe rodando
+2. Substitua a imagem
+3. No servidor, clique "Destrava" e depois "Trava" novamente
+   (A nova imagem será carregada)
+
+═══════════════════════════════════════════════════════════════════
+
+❓ TROUBLESHOOTING:
+
+Problema: Imagem não aparece
+Solução:
+  - Verifique se o arquivo é exatamente "00.bmp" (não "00.bmp.bmp")
+  - Verifique se está na pasta C:\overlayplanta\
+  - Verifique o formato (deve ser BMP 24-bit)
+  - Veja os logs do cliente para confirmar
+
+Problema: Imagem aparece distorcida
+Solução:
+  - Verifique as dimensões (devem ser exatamente 642x484)
+  - O código ajusta automaticamente preservando aspect ratio
+  - Se estiver distorcida, a imagem original pode estar incorreta
+
+Problema: Pasta não foi criada
+Solução:
+  - Execute ClienteScreen.exe com permissões adequadas
+  - Crie manualmente a pasta C:\overlayplanta\
+  - Verifique se há espaço em disco
+
+═══════════════════════════════════════════════════════════════════
+
+📌 RESUMO RÁPIDO:
+
+Local:  C:\overlayplanta\00.bmp
+Tamanho: 642 x 484 pixels
+Formato: BMP 24-bit
+
+Pronto! ✓
+
+═══════════════════════════════════════════════════════════════════
+Desenvolvido em: 2025-12-06
+═══════════════════════════════════════════════════════════════════
