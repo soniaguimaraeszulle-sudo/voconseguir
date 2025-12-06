@@ -19,6 +19,18 @@ public class ScreenLockOverlay
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
 
+    // Constantes para janela Layered (não capturada)
+    private const int WS_EX_LAYERED = 0x80000;
+    private const int WS_EX_TRANSPARENT = 0x20;
+    private const int WS_EX_TOPMOST = 0x8;
+    private const int GWL_EXSTYLE = -20;
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
@@ -221,7 +233,34 @@ public class ScreenLockOverlay
                     e.Cancel = true;
             };
 
+            // Quando a janela for criada, configurar como LAYERED para não ser capturada
+            HandleCreated += (s, e) =>
+            {
+                try
+                {
+                    int currentStyle = GetWindowLong(Handle, GWL_EXSTYLE);
+                    // Adicionar WS_EX_LAYERED mas SEM WS_EX_TRANSPARENT (para capturar input)
+                    SetWindowLong(Handle, GWL_EXSTYLE, currentStyle | WS_EX_LAYERED);
+                    Console.WriteLine($"[LOCK-FORM] Janela configurada como LAYERED (não será capturada)");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Erro ao configurar LAYERED: {ex.Message}");
+                }
+            };
+
             Console.WriteLine("[LOCK-FORM] Form criado");
+        }
+
+        // Sobrescrever CreateParams para adicionar WS_EX_LAYERED desde o início
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TOPMOST;
+                return cp;
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
