@@ -571,7 +571,8 @@ public class ScreenLockOverlay
 
                 // WS_EX_NOACTIVATE: não roubar foco de outras janelas (apenas quando não travado)
                 // Quando travado, queremos roubar o foco
-                if (!_parent.IsLocked)
+                // IMPORTANTE: _parent pode ser null durante a construção do Form
+                if (_parent != null && !_parent.IsLocked)
                 {
                     cp.ExStyle |= 0x08000000;
                 }
