@@ -33,6 +33,10 @@ echo ============================================================
 echo [1/2] Publicando ClienteScreen (standalone - NÃO precisa .NET)
 echo ============================================================
 cd /d "%ROOT_DIR%ClienteScreen"
+echo [INFO] Limpando cache de build do ClienteScreen...
+dotnet clean ClienteScreen.csproj -c Release >nul 2>&1
+echo [OK] Cache limpo!
+echo [INFO] Iniciando publicação...
 dotnet publish ClienteScreen.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%OUTPUT_DIR%\Cliente"
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -48,6 +52,10 @@ echo ============================================================
 echo [2/2] Publicando ServidorScreenPanel (standalone - NÃO precisa .NET)
 echo ============================================================
 cd /d "%ROOT_DIR%ServidorScreenPanel"
+echo [INFO] Limpando cache de build do ServidorScreenPanel...
+dotnet clean ServidorScreenPanel.csproj -c Release >nul 2>&1
+echo [OK] Cache limpo!
+echo [INFO] Iniciando publicação...
 dotnet publish ServidorScreenPanel.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "%OUTPUT_DIR%\Servidor"
 if %ERRORLEVEL% NEQ 0 (
     echo.
