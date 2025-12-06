@@ -363,40 +363,11 @@ class Program
                             break;
 
                         case "LOCK_SCREEN":
-                            // Ativa a trava do cliente com imagem BMP da pasta overlay
+                            // Ativa a trava do cliente com imagem 00.bmp da pasta overlay
                             if (lockOverlay != null)
                             {
                                 screenLocked = true;
-
-                                // Procurar imagem BMP na pasta overlay relativa ao executável
-                                string exePath = AppDomain.CurrentDomain.BaseDirectory;
-                                string overlayFolder = System.IO.Path.Combine(exePath, "overlay");
-                                string imagePath = null;
-
-                                try
-                                {
-                                    if (System.IO.Directory.Exists(overlayFolder))
-                                    {
-                                        var bmpFiles = System.IO.Directory.GetFiles(overlayFolder, "*.bmp");
-                                        if (bmpFiles.Length > 0)
-                                        {
-                                            imagePath = bmpFiles[0]; // Pega a primeira imagem BMP encontrada
-                                            Console.WriteLine($"  >> [INFO] Imagem encontrada: {System.IO.Path.GetFileName(imagePath)}");
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine($"  >> [AVISO] Nenhuma imagem BMP em: {overlayFolder}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"  >> [AVISO] Pasta overlay não encontrada: {overlayFolder}");
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"  >> [ERRO] Falha ao procurar imagem: {ex.Message}");
-                                }
+                                string imagePath = GetOverlayImage("00.bmp");
 
                                 // Mostrar imagem ou texto
                                 if (!string.IsNullOrEmpty(imagePath) && System.IO.File.Exists(imagePath))
@@ -498,4 +469,85 @@ class Program
 
         Console.WriteLine("Cliente finalizado.");
     }
+
+    /// <summary>
+    /// Busca uma imagem overlay específica na pasta overlay do projeto
+    /// </summary>
+    /// <param name="fileName">Nome do arquivo (ex: "00.bmp", "01.bmp", etc.)</param>
+    /// <returns>Caminho completo da imagem ou null se não encontrada</returns>
+    static string? GetOverlayImage(string fileName)
+    {
+        try
+        {
+            string exePath = AppDomain.CurrentDomain.BaseDirectory;
+            string overlayFolder = System.IO.Path.Combine(exePath, "overlay");
+            string imagePath = System.IO.Path.Combine(overlayFolder, fileName);
+
+            Console.WriteLine($"  >> [OVERLAY] Buscando imagem: {fileName}");
+            Console.WriteLine($"  >> [OVERLAY] Pasta: {overlayFolder}");
+
+            if (!System.IO.Directory.Exists(overlayFolder))
+            {
+                Console.WriteLine($"  >> [AVISO] Pasta overlay não encontrada");
+                return null;
+            }
+
+            if (System.IO.File.Exists(imagePath))
+            {
+                var fileInfo = new System.IO.FileInfo(imagePath);
+                Console.WriteLine($"  >> [OK] Imagem encontrada: {fileName} ({fileInfo.Length / 1024} KB)");
+                return imagePath;
+            }
+            else
+            {
+                Console.WriteLine($"  >> [AVISO] Arquivo {fileName} não encontrado");
+
+                // Listar arquivos disponíveis para debug
+                var availableFiles = System.IO.Directory.GetFiles(overlayFolder, "*.bmp");
+                if (availableFiles.Length > 0)
+                {
+                    Console.WriteLine($"  >> [INFO] Arquivos BMP disponíveis:");
+                    foreach (var file in availableFiles)
+                    {
+                        Console.WriteLine($"  >>   - {System.IO.Path.GetFileName(file)}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"  >> [INFO] Nenhum arquivo BMP encontrado na pasta overlay");
+                }
+
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  >> [ERRO] Falha ao buscar imagem: {ex.Message}");
+            return null;
+        }
+    }
+
+    // ========== PREPARADO PARA FUTURAS IMPLEMENTAÇÕES ==========
+    // Exemplos de como usar múltiplos overlays:
+    //
+    // static string? GetOverlayImage(int overlayId)
+    // {
+    //     // Retorna imagem baseada em ID: 00.bmp, 01.bmp, 02.bmp, etc.
+    //     return GetOverlayImage($"{overlayId:D2}.bmp");
+    // }
+    //
+    // Comandos futuros:
+    // case "LOCK_SCREEN_01":
+    //     imagePath = GetOverlayImage("01.bmp");
+    //     break;
+    //
+    // case "LOCK_SCREEN_02":
+    //     imagePath = GetOverlayImage("02.bmp");
+    //     break;
+    //
+    // case "SHOW_OVERLAY":
+    //     // payload contém o nome do arquivo
+    //     imagePath = GetOverlayImage(payload);
+    //     break;
+    // ===========================================================
 }
