@@ -167,12 +167,11 @@ class Program
             {
                 try
                 {
-                    // O overlay é excluído da captura pelo SetWindowDisplayAffinity
-                    // Servidor sempre vê o desktop real, cliente vê o overlay quando travado
+                    // Sempre capturar e enviar frame ao vivo do desktop
+                    // Quando travado: cliente e servidor veem o overlay
                     byte[] jpeg;
                     int width, height;
 
-                    // Sempre capturar frame ao vivo
                     using var capturer = new DesktopDuplicationCapturer(currentMonitor);
                     jpeg = capturer.CaptureFrameJpeg(out width, out height);
 

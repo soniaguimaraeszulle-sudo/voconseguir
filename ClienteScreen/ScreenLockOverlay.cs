@@ -19,16 +19,12 @@ public class ScreenLockOverlay
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
 
-    // SetWindowDisplayAffinity para excluir janela de captura de tela
-    private const uint WDA_NONE = 0x00000000;
-    private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
-
-    [DllImport("user32.dll")]
-    private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    private static extern bool BlockInput(bool fBlockIt);
+
+    [DllImport("user32.dll", EntryPoint = "BlockInput")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool BlockInput([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] bool fBlockIt);
 
     public ScreenLockOverlay()
     {
@@ -68,10 +64,9 @@ public class ScreenLockOverlay
 
             if (locked)
             {
-                // Ao travar: overlay já está excluído da captura por SetWindowDisplayAffinity
-                // Cliente vê o overlay, servidor NÃO vê (vê desktop limpo)
+                // Ao travar: mostrar overlay fullscreen
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
-                Console.WriteLine("[LOCK] Overlay visível para CLIENTE, invisível para SERVIDOR (captura)");
+                Console.WriteLine("[LOCK] Exibindo overlay de bloqueio em tela cheia");
 
                 _lockForm?.BeginInvoke(new Action(() =>
                 {
@@ -79,19 +74,27 @@ public class ScreenLockOverlay
                     {
                         if (_lockForm != null)
                         {
-                            // Trazer overlay para frente e torná-lo visível
+                            // Garantir que overlay apareça IMEDIATAMENTE em tela cheia
+                            _lockForm.Opacity = 1.0;  // Tornar visível imediatamente
                             _lockForm.TopMost = true;
+                            _lockForm.FormBorderStyle = FormBorderStyle.None;
+                            _lockForm.WindowState = FormWindowState.Normal;
+                            _lockForm.Bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
                             _lockForm.BringToFront();
-                            _lockForm.WindowState = FormWindowState.Maximized;
+                            _lockForm.Show();
                             _lockForm.Activate();
+                            _lockForm.Focus();
                             SetForegroundWindow(_lockForm.Handle);
-                            Console.WriteLine("[LOCK] Overlay ativado (visível para usuário local)");
+                            Console.WriteLine($"[LOCK] Overlay VISÍVEL: Opacity={_lockForm.Opacity}, Bounds={_lockForm.Bounds}");
                         }
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"[LOCK] Erro ao ativar overlay: {ex.Message}");
                     }
+
+                    _lockForm?.Invalidate();
+                    _lockForm?.Update();
                     _lockForm?.Refresh();
 
                     // Bloquear entrada do usuário
@@ -216,26 +219,6 @@ public class ScreenLockOverlay
                     e.Cancel = true;
             };
 
-            // Quando a janela for criada, excluí-la da captura de tela
-            Load += (s, e) =>
-            {
-                try
-                {
-                    // Excluir esta janela de qualquer captura de tela (Print Screen, Desktop Duplication API, etc.)
-                    bool result = SetWindowDisplayAffinity(Handle, WDA_EXCLUDEFROMCAPTURE);
-                    Console.WriteLine($"[LOCK-FORM] SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) = {result}");
-                    if (!result)
-                    {
-                        int error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-                        Console.WriteLine($"[LOCK-FORM] Erro ao excluir da captura: Win32Error={error}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[LOCK-FORM] Exceção ao configurar exclusão de captura: {ex.Message}");
-                }
-            };
-
             Console.WriteLine("[LOCK-FORM] LockForm criado com sucesso");
         }
 
@@ -245,29 +228,30 @@ public class ScreenLockOverlay
                 return;
 
             double oldOpacity = Opacity;
-            bool enabled = Enabled;
 
             if (_parent.IsLocked)
             {
-                // Sempre manter a trava visível no cliente quando travado.
-                if (Opacity < 0.95)
-                    Opacity = Math.Min(1.0, Opacity + 0.15);
+                // Manter totalmente visível quando travado
+                if (Opacity < 0.99)
+                {
+                    Opacity = 1.0;
+                    Console.WriteLine($"[LOCK-TIMER] Garantindo visibilidade: Opacity={Opacity}");
+                }
+
                 if (!Enabled)
                 {
                     Enabled = true;
-                    Console.WriteLine("[LOCK-TIMER] Reabilitando form para bloquear entrada");
+                    Console.WriteLine("[LOCK-TIMER] Form habilitado");
                 }
             }
             else
             {
-                // Fade out quando desbloqueado
-                if (Opacity > 0.05)
-                    Opacity = Math.Max(0, Opacity - 0.15);
-            }
-
-            if (Math.Abs(oldOpacity - Opacity) > 0.01 || enabled != Enabled)
-            {
-                Console.WriteLine($"[LOCK-TIMER] IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity: {oldOpacity:F2} → {Opacity:F2}, Enabled={Enabled}");
+                // Fade out rápido quando desbloqueado
+                if (Opacity > 0.01)
+                {
+                    Opacity = 0;
+                    Console.WriteLine($"[LOCK-TIMER] Escondendo overlay: Opacity={Opacity}");
+                }
             }
         }
 
@@ -278,42 +262,33 @@ public class ScreenLockOverlay
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, Opacity={Opacity:F2}");
-
-            // Se não está travado e opacity é baixa, limpar com preto
-            if (!_parent.IsLocked && Opacity < 0.1)
-            {
-                g.Clear(Color.Black);
-                Console.WriteLine("[LOCK-PAINT] Não renderizando (não travado)");
-                return;
-            }
+            Console.WriteLine($"[LOCK-PAINT] OnPaint chamado - IsLocked={_parent.IsLocked}, Opacity={Opacity:F2}, Visible={Visible}, Size={Width}x{Height}");
 
             if (_parent.IsLocked)
             {
-                Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA VISÍVEL");
+                Console.WriteLine("[LOCK-PAINT] *** RENDERIZANDO TRAVA ***");
 
-                // Fundo PRETO SÓLIDO
-                g.Clear(Color.Black);
+                // Fundo VERMELHO FORTE para teste (depois mudamos para preto)
+                g.Clear(Color.Red);
 
-                // Texto "TRAVA" ENORME em BRANCO
-                using (var font = new Font("Arial", 150, FontStyle.Bold))
-                using (var brush = new SolidBrush(Color.White))
+                // Texto "TRAVA" GIGANTE em AMARELO (bem visível)
+                using (var font = new Font("Arial", 200, FontStyle.Bold))
+                using (var brush = new SolidBrush(Color.Yellow))
                 {
                     var text = "TRAVA";
                     var size = g.MeasureString(text, font);
                     int textX = (Width - (int)size.Width) / 2;
                     int textY = (Height - (int)size.Height) / 2;
 
-                    // Desenhar texto branco grande
                     g.DrawString(text, font, brush, textX, textY);
-                    Console.WriteLine($"[LOCK-PAINT] Texto TRAVA desenhado em X={textX}, Y={textY}, Size={size}");
+                    Console.WriteLine($"[LOCK-PAINT] *** TEXTO DESENHADO em X={textX}, Y={textY} ***");
                 }
 
-                // Informação embaixo
-                using (var font = new Font("Arial", 16, FontStyle.Bold))
-                using (var brush = new SolidBrush(Color.Red))
+                // Mensagem embaixo em branco
+                using (var font = new Font("Arial", 20, FontStyle.Bold))
+                using (var brush = new SolidBrush(Color.White))
                 {
-                    var text = "CLIENTE TRAVADO - NÃO TENTE INTERAGIR";
+                    var text = "CLIENTE TRAVADO";
                     var textSize = g.MeasureString(text, font);
                     int x = (Width - (int)textSize.Width) / 2;
                     g.DrawString(text, font, brush, x, Height - 100);
@@ -321,8 +296,9 @@ public class ScreenLockOverlay
             }
             else
             {
-                // Quando não travado, limpar
+                // Não travado: fundo preto invisível
                 g.Clear(Color.Black);
+                Console.WriteLine("[LOCK-PAINT] Overlay escondido (não travado)");
             }
         }
 
