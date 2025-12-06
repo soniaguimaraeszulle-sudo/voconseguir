@@ -140,9 +140,6 @@ class Program
         {
             lockOverlay = new ScreenLockOverlay();
             Console.WriteLine("[LOCK] Overlay de trava inicializado");
-
-            // Criar pasta overlayplanta e imagem se não existir
-            InitializeOverlayImages();
         }
         catch (Exception ex)
         {
@@ -371,8 +368,9 @@ class Program
                             {
                                 screenLocked = true;
 
-                                // Procurar imagem BMP na pasta C:\overlay
-                                string overlayFolder = @"C:\overlay";
+                                // Procurar imagem BMP na pasta overlay relativa ao executável
+                                string exePath = AppDomain.CurrentDomain.BaseDirectory;
+                                string overlayFolder = System.IO.Path.Combine(exePath, "overlay");
                                 string imagePath = null;
 
                                 try
@@ -383,7 +381,16 @@ class Program
                                         if (bmpFiles.Length > 0)
                                         {
                                             imagePath = bmpFiles[0]; // Pega a primeira imagem BMP encontrada
+                                            Console.WriteLine($"  >> [INFO] Imagem encontrada: {System.IO.Path.GetFileName(imagePath)}");
                                         }
+                                        else
+                                        {
+                                            Console.WriteLine($"  >> [AVISO] Nenhuma imagem BMP em: {overlayFolder}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"  >> [AVISO] Pasta overlay não encontrada: {overlayFolder}");
                                     }
                                 }
                                 catch (Exception ex)
@@ -402,7 +409,7 @@ class Program
                                 {
                                     // Fallback para texto se imagem não existir
                                     lockOverlay.ShowLockText();
-                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (texto TRAVA - imagem não encontrada)");
+                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (texto TRAVA - sem imagem)");
                                 }
                             }
                             break;
@@ -490,53 +497,5 @@ class Program
         catch { }
 
         Console.WriteLine("Cliente finalizado.");
-    }
-
-    /// <summary>
-    /// Inicializa a pasta overlay e detecta imagens BMP
-    /// </summary>
-    static void InitializeOverlayImages()
-    {
-        try
-        {
-            // Caminho da pasta (na raiz C:)
-            string folderPath = @"C:\overlay";
-
-            Console.WriteLine("[OVERLAY-INIT] Verificando pasta de overlays...");
-
-            // Criar pasta se não existir
-            if (!System.IO.Directory.Exists(folderPath))
-            {
-                System.IO.Directory.CreateDirectory(folderPath);
-                Console.WriteLine($"[OVERLAY-INIT] ✓ Pasta criada: {folderPath}");
-            }
-            else
-            {
-                Console.WriteLine($"[OVERLAY-INIT] ✓ Pasta encontrada: {folderPath}");
-            }
-
-            // Procurar arquivos BMP na pasta
-            var bmpFiles = System.IO.Directory.GetFiles(folderPath, "*.bmp");
-            if (bmpFiles.Length > 0)
-            {
-                Console.WriteLine($"[OVERLAY-INIT] ✓ Encontradas {bmpFiles.Length} imagem(ns) BMP:");
-                foreach (var file in bmpFiles)
-                {
-                    string fileName = System.IO.Path.GetFileName(file);
-                    var fileInfo = new System.IO.FileInfo(file);
-                    Console.WriteLine($"[OVERLAY-INIT]   - {fileName} ({fileInfo.Length / 1024} KB)");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"[OVERLAY-INIT] ! AVISO: Nenhuma imagem BMP encontrada em {folderPath}");
-                Console.WriteLine($"[OVERLAY-INIT] ! Adicione uma imagem BMP na pasta");
-                Console.WriteLine($"[OVERLAY-INIT] ! Se não houver imagem, será mostrado texto TRAVA");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[OVERLAY-INIT] ERRO ao inicializar overlays: {ex.Message}");
-        }
     }
 }
