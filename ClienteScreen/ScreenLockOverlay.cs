@@ -19,11 +19,6 @@ public class ScreenLockOverlay
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
 
-    // DWM attribute to exclude a window from capture (may not be supported on all Windows versions)
-    private const int DWMWA_EXCLUDED_FROM_CAPTURE = 13;
-
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")]
@@ -67,65 +62,9 @@ public class ScreenLockOverlay
 
             if (locked)
             {
-                // Ao travar: manter TRAVA visível no cliente, mas excluir a janela da captura
-                _showBehind = true; // servidor deve ver o desktop livre
-                Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
-
-                    _lockForm?.BeginInvoke(new Action(() =>
-                    {
-                        try
-                        {
-                            if (_lockForm != null)
-                            {
-                                int val = 1;
-                                var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
-                                // Garantir que o overlay fique em primeiro plano e capture entrada
-                                try
-                                {
-                                    _lockForm.TopMost = true;
-                                    _lockForm.BringToFront();
-                                    _lockForm.WindowState = FormWindowState.Maximized;
-                                    _lockForm.Capture = true;
-                                    _lockForm.Activate();
-                                    SetForegroundWindow(_lockForm.Handle);
-                                }
-                                catch (Exception exf)
-                                {
-                                    Console.WriteLine($"[LOCK] Aviso ao forçar foco do overlay: {exf.Message}");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[LOCK] Erro ao setar DWM attribute na ativação: {ex.Message}");
-                        }
-                        _lockForm?.Refresh();
-                        // Ativar bloqueio local de input para evitar interação do usuário local
-                        try
-                        {
-                            InputBlocker.Start();
-                            try
-                            {
-                                var ok = BlockInput(true);
-                                Console.WriteLine($"[LOCK] BlockInput(true) called, return={ok}");
-                            }
-                            catch (Exception exbi)
-                            {
-                                Console.WriteLine($"[LOCK] Aviso: BlockInput(true) falhou: {exbi.Message}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[LOCK] Aviso: falha ao iniciar InputBlocker: {ex.Message}");
-                        }
-                    }));
-            }
-            else
-            {
-                // Ao destravar: re-incluir overlay na captura
+                // Ao travar: manter TRAVA visível no cliente
                 _showBehind = false;
-                Console.WriteLine("[LOCK] ========== TRAVA DESATIVADA ==========");
+                Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
 
                 _lockForm?.BeginInvoke(new Action(() =>
                 {
@@ -133,33 +72,54 @@ public class ScreenLockOverlay
                     {
                         if (_lockForm != null)
                         {
-                            int val = 0;
-                            var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
+                            // Garantir que o overlay fique em primeiro plano e capture entrada
+                            _lockForm.TopMost = true;
+                            _lockForm.BringToFront();
+                            _lockForm.WindowState = FormWindowState.Maximized;
+                            _lockForm.Activate();
+                            SetForegroundWindow(_lockForm.Handle);
+                            Console.WriteLine("[LOCK] Overlay trazido para frente");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[LOCK] Erro ao resetar DWM attribute na desativação: {ex.Message}");
+                        Console.WriteLine($"[LOCK] Erro ao ativar overlay: {ex.Message}");
                     }
                     _lockForm?.Refresh();
+
+                    // Ativar bloqueio local de input para evitar interação do usuário local
+                    try
+                    {
+                        InputBlocker.Start();
+                        var ok = BlockInput(true);
+                        Console.WriteLine($"[LOCK] BlockInput(true) called, return={ok}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[LOCK] Aviso: falha ao bloquear input: {ex.Message}");
+                    }
+                }));
+            }
+            else
+            {
+                // Ao destravar
+                _showBehind = false;
+                Console.WriteLine("[LOCK] ========== TRAVA DESATIVADA ==========");
+
+                _lockForm?.BeginInvoke(new Action(() =>
+                {
+                    _lockForm?.Refresh();
+
                     // Desativar bloqueio local
                     try
                     {
                         InputBlocker.Stop();
-                        try
-                        {
-                            var ok = BlockInput(false);
-                            Console.WriteLine($"[LOCK] BlockInput(false) called, return={ok}");
-                        }
-                        catch (Exception exbi)
-                        {
-                            Console.WriteLine($"[LOCK] Aviso: BlockInput(false) falhou: {exbi.Message}");
-                        }
+                        var ok = BlockInput(false);
+                        Console.WriteLine($"[LOCK] BlockInput(false) called, return={ok}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[LOCK] Aviso: falha ao parar InputBlocker: {ex.Message}");
+                        Console.WriteLine($"[LOCK] Aviso: falha ao desbloquear input: {ex.Message}");
                     }
                 }));
             }
@@ -292,9 +252,9 @@ public class ScreenLockOverlay
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity={Opacity:F2}, Enabled={Enabled}");
+            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, Opacity={Opacity:F2}");
 
-            // Se não está travado e opacity é baixa, não renderizar nada
+            // Se não está travado e opacity é baixa, limpar com preto
             if (!_parent.IsLocked && Opacity < 0.1)
             {
                 g.Clear(Color.Black);
@@ -304,68 +264,39 @@ public class ScreenLockOverlay
 
             if (_parent.IsLocked)
             {
-                Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA (cliente vê isto sempre)");
+                Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA VISÍVEL");
 
-                // Desenhar fundo xadrez preto e branco
-                int squareSize = 40; // tamanho de cada quadrado do xadrez
-                for (int y = 0; y < Height; y += squareSize)
-                {
-                    for (int x = 0; x < Width; x += squareSize)
-                    {
-                        // Alterna entre preto e branco baseado na posição
-                        bool isBlack = ((x / squareSize) + (y / squareSize)) % 2 == 0;
-                        using (var brush = new SolidBrush(isBlack ? Color.Black : Color.White))
-                        {
-                            g.FillRectangle(brush, x, y, squareSize, squareSize);
-                        }
-                    }
-                }
+                // Fundo PRETO SÓLIDO
+                g.Clear(Color.Black);
 
-                // Texto "TRAVA" com fundo semi-transparente para melhor legibilidade
-                using (var font = new Font("Arial", 120, FontStyle.Bold))
+                // Texto "TRAVA" ENORME em BRANCO
+                using (var font = new Font("Arial", 150, FontStyle.Bold))
+                using (var brush = new SolidBrush(Color.White))
                 {
                     var text = "TRAVA";
                     var size = g.MeasureString(text, font);
                     int textX = (Width - (int)size.Width) / 2;
                     int textY = (Height - (int)size.Height) / 2;
 
-                    // Fundo semi-transparente atrás do texto
-                    using (var bgBrush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))
-                    {
-                        g.FillRectangle(bgBrush, textX - 20, textY - 20, (int)size.Width + 40, (int)size.Height + 40);
-                    }
-
-                    // Sombra
-                    using (var shadowBrush = new SolidBrush(Color.DarkGray))
-                    {
-                        g.DrawString(text, font, shadowBrush, textX + 3, textY + 3);
-                    }
-
-                    // Texto principal em vermelho para destaque
-                    using (var brush = new SolidBrush(Color.Red))
-                    {
-                        g.DrawString(text, font, brush, textX, textY);
-                    }
-                    Console.WriteLine("[LOCK-PAINT] Texto TRAVA desenhado");
+                    // Desenhar texto branco grande
+                    g.DrawString(text, font, brush, textX, textY);
+                    Console.WriteLine($"[LOCK-PAINT] Texto TRAVA desenhado em X={textX}, Y={textY}, Size={size}");
                 }
 
-                // Informação embaixo com fundo
-                using (var font = new Font("Arial", 14))
+                // Informação embaixo
+                using (var font = new Font("Arial", 16, FontStyle.Bold))
+                using (var brush = new SolidBrush(Color.Red))
                 {
-                    var text = "Cliente Travado";
+                    var text = "CLIENTE TRAVADO - NÃO TENTE INTERAGIR";
                     var textSize = g.MeasureString(text, font);
-
-                    // Fundo preto atrás do texto
-                    using (var bgBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
-                    {
-                        g.FillRectangle(bgBrush, 10, Height - 70, textSize.Width + 20, 30);
-                    }
-
-                    using (var brush = new SolidBrush(Color.LimeGreen))
-                    {
-                        g.DrawString(text, font, brush, 20, Height - 60);
-                    }
+                    int x = (Width - (int)textSize.Width) / 2;
+                    g.DrawString(text, font, brush, x, Height - 100);
                 }
+            }
+            else
+            {
+                // Quando não travado, limpar
+                g.Clear(Color.Black);
             }
         }
 
