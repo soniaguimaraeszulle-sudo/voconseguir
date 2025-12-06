@@ -24,12 +24,17 @@ public class ScreenLockOverlay
     private const int WS_EX_TRANSPARENT = 0x20;
     private const int WS_EX_TOPMOST = 0x8;
     private const int GWL_EXSTYLE = -20;
+    private const int LWA_ALPHA = 0x2;
+    private const int LWA_COLORKEY = 0x1;
 
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -95,6 +100,18 @@ public class ScreenLockOverlay
                             _lockForm.TopMost = true;
                             _lockForm.Opacity = 1.0;
                             _lockForm.Visible = true;
+
+                            // CRÍTICO: Garantir que janela LAYERED está visível
+                            try
+                            {
+                                bool layerResult = SetLayeredWindowAttributes(_lockForm.Handle, 0, 255, LWA_ALPHA);
+                                Console.WriteLine($"[LOCK] SetLayeredWindowAttributes na ativação: {layerResult}");
+                            }
+                            catch (Exception exLayer)
+                            {
+                                Console.WriteLine($"[LOCK] Erro ao configurar Layer Attributes: {exLayer.Message}");
+                            }
+
                             _lockForm.Show();
                             _lockForm.BringToFront();
                             _lockForm.Activate();
@@ -241,7 +258,11 @@ public class ScreenLockOverlay
                     int currentStyle = GetWindowLong(Handle, GWL_EXSTYLE);
                     // Adicionar WS_EX_LAYERED mas SEM WS_EX_TRANSPARENT (para capturar input)
                     SetWindowLong(Handle, GWL_EXSTYLE, currentStyle | WS_EX_LAYERED);
-                    Console.WriteLine($"[LOCK-FORM] Janela configurada como LAYERED (não será capturada)");
+
+                    // CRÍTICO: Configurar atributos da janela LAYERED para torná-la visível
+                    // LWA_ALPHA = usar alpha (opacidade), 255 = totalmente opaco
+                    bool result = SetLayeredWindowAttributes(Handle, 0, 255, LWA_ALPHA);
+                    Console.WriteLine($"[LOCK-FORM] Janela LAYERED configurada: SetLayeredWindowAttributes={result}");
                 }
                 catch (Exception ex)
                 {
