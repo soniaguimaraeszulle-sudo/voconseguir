@@ -705,29 +705,17 @@ public class ScreenLockOverlay
                 {
                     Console.WriteLine($"[RENDER] Imagem customizada encontrada, iniciando renderização...");
 
-                    // Calcular dimensões para manter aspect ratio
+                    // Usar dimensões ORIGINAIS da imagem (sem escalar)
                     int imgWidth = _parent._customImage.Width;
                     int imgHeight = _parent._customImage.Height;
 
                     Console.WriteLine($"[RENDER] Dimensões originais: {imgWidth}x{imgHeight}");
                     Console.WriteLine($"[RENDER] Dimensões da tela: {Width}x{Height}");
+                    Console.WriteLine($"[RENDER] Renderizando imagem em tamanho ORIGINAL (sem escala)");
 
-                    // Ajustar para caber na tela mantendo proporção
-                    float scaleWidth = (float)Width / imgWidth;
-                    float scaleHeight = (float)Height / imgHeight;
-                    float scale = Math.Min(scaleWidth, scaleHeight);
-
-                    Console.WriteLine($"[RENDER] ScaleWidth: {scaleWidth:F2}, ScaleHeight: {scaleHeight:F2}");
-                    Console.WriteLine($"[RENDER] Scale final: {scale:F2}");
-
-                    int newWidth = (int)(imgWidth * scale);
-                    int newHeight = (int)(imgHeight * scale);
-
-                    Console.WriteLine($"[RENDER] Dimensões após escala: {newWidth}x{newHeight}");
-
-                    // Centralizar imagem
-                    int x = (Width - newWidth) / 2;
-                    int y = (Height - newHeight) / 2;
+                    // Centralizar imagem usando tamanho original
+                    int x = (Width - imgWidth) / 2;
+                    int y = (Height - imgHeight) / 2;
 
                     Console.WriteLine($"[RENDER] Posição centralizada: X={x}, Y={y}");
 
@@ -735,19 +723,9 @@ public class ScreenLockOverlay
                     Console.WriteLine($"[RENDER] Configurando InterpolationMode: HighQualityBicubic");
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
 
-                    Console.WriteLine($"[RENDER] Desenhando imagem com DrawImage()...");
-                    g.DrawImage(_parent._customImage, x, y, newWidth, newHeight);
+                    Console.WriteLine($"[RENDER] Desenhando imagem no tamanho original {imgWidth}x{imgHeight}...");
+                    g.DrawImage(_parent._customImage, x, y, imgWidth, imgHeight);
                     Console.WriteLine($"[RENDER] Imagem desenhada com sucesso!");
-
-                    // Mensagem embaixo
-                    Console.WriteLine($"[RENDER] Desenhando texto 'Aguarde, processando...'");
-                    using (var font = new Font("Arial", 12))
-                    using (var brush = new SolidBrush(Color.White))
-                    {
-                        var text = "Aguarde, processando...";
-                        var size = g.MeasureString(text, font);
-                        g.DrawString(text, font, brush, (Width - size.Width) / 2, Height - 50);
-                    }
 
                     Console.WriteLine($"[RENDER] === RenderCustomImage() FINALIZADO (SUCESSO) ===");
                 }
