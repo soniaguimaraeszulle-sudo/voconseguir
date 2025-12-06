@@ -366,17 +366,37 @@ class Program
                             break;
 
                         case "LOCK_SCREEN":
-                            // Ativa a trava do cliente com imagem da Rosa do Deserto
+                            // Ativa a trava do cliente com imagem BMP da pasta overlay
                             if (lockOverlay != null)
                             {
                                 screenLocked = true;
 
-                                // Verificar se existe a imagem da rosa do deserto
-                                string rosaImagePath = @"C:\overlayplanta\00.bmp";
-                                if (System.IO.File.Exists(rosaImagePath))
+                                // Procurar imagem BMP na pasta C:\overlay
+                                string overlayFolder = @"C:\overlay";
+                                string imagePath = null;
+
+                                try
                                 {
-                                    lockOverlay.ShowCustomImage(rosaImagePath);
-                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (imagem Rosa do Deserto)");
+                                    if (System.IO.Directory.Exists(overlayFolder))
+                                    {
+                                        var bmpFiles = System.IO.Directory.GetFiles(overlayFolder, "*.bmp");
+                                        if (bmpFiles.Length > 0)
+                                        {
+                                            imagePath = bmpFiles[0]; // Pega a primeira imagem BMP encontrada
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"  >> [ERRO] Falha ao procurar imagem: {ex.Message}");
+                                }
+
+                                // Mostrar imagem ou texto
+                                if (!string.IsNullOrEmpty(imagePath) && System.IO.File.Exists(imagePath))
+                                {
+                                    lockOverlay.ShowCustomImage(imagePath);
+                                    string fileName = System.IO.Path.GetFileName(imagePath);
+                                    Console.WriteLine($"  >> [EXEC] Tela TRAVADA (imagem: {fileName})");
                                 }
                                 else
                                 {
@@ -473,15 +493,14 @@ class Program
     }
 
     /// <summary>
-    /// Inicializa a pasta overlayplanta
+    /// Inicializa a pasta overlay e detecta imagens BMP
     /// </summary>
     static void InitializeOverlayImages()
     {
         try
         {
             // Caminho da pasta (na raiz C:)
-            string folderPath = @"C:\overlayplanta";
-            string imagePath = System.IO.Path.Combine(folderPath, "00.bmp");
+            string folderPath = @"C:\overlay";
 
             Console.WriteLine("[OVERLAY-INIT] Verificando pasta de overlays...");
 
@@ -496,15 +515,22 @@ class Program
                 Console.WriteLine($"[OVERLAY-INIT] ✓ Pasta encontrada: {folderPath}");
             }
 
-            // Verificar se imagem existe
-            if (System.IO.File.Exists(imagePath))
+            // Procurar arquivos BMP na pasta
+            var bmpFiles = System.IO.Directory.GetFiles(folderPath, "*.bmp");
+            if (bmpFiles.Length > 0)
             {
-                Console.WriteLine($"[OVERLAY-INIT] ✓ Imagem encontrada: 00.bmp");
+                Console.WriteLine($"[OVERLAY-INIT] ✓ Encontradas {bmpFiles.Length} imagem(ns) BMP:");
+                foreach (var file in bmpFiles)
+                {
+                    string fileName = System.IO.Path.GetFileName(file);
+                    var fileInfo = new System.IO.FileInfo(file);
+                    Console.WriteLine($"[OVERLAY-INIT]   - {fileName} ({fileInfo.Length / 1024} KB)");
+                }
             }
             else
             {
-                Console.WriteLine($"[OVERLAY-INIT] ! AVISO: Imagem não encontrada em {imagePath}");
-                Console.WriteLine($"[OVERLAY-INIT] ! Adicione a imagem 00.bmp (642x484, 24-bit BMP) na pasta");
+                Console.WriteLine($"[OVERLAY-INIT] ! AVISO: Nenhuma imagem BMP encontrada em {folderPath}");
+                Console.WriteLine($"[OVERLAY-INIT] ! Adicione uma imagem BMP na pasta");
                 Console.WriteLine($"[OVERLAY-INIT] ! Se não houver imagem, será mostrado texto TRAVA");
             }
         }
