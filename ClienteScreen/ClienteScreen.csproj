@@ -27,9 +27,14 @@
     <Protobuf Include="Protos\screen.proto" GrpcServices="Client" />
   </ItemGroup>
 
-  <!-- Copiar pasta overlay para o diretório de saída -->
+  <!-- Copiar pastas de overlay para o diretório de saída -->
+  <!-- Adicione novas pastas aqui conforme necessário -->
   <ItemGroup>
     <None Include="overlay\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Futuras pastas overlay (descomente conforme adicionar): -->
+    <!-- <None Include="planta\**\*" CopyToOutputDirectory="PreserveNewest" /> -->
+    <!-- <None Include="mensagem\**\*" CopyToOutputDirectory="PreserveNewest" /> -->
+    <!-- <None Include="aviso\**\*" CopyToOutputDirectory="PreserveNewest" /> -->
   </ItemGroup>
 
 </Project>
