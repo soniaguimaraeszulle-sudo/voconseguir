@@ -55,8 +55,6 @@ public class GdiScreenCapturer : IDisposable
             _bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
         }
 
-        Console.WriteLine($"[GDI-CAPTURE] Monitor {monitorIndex}: {_bounds.Width}x{_bounds.Height} @ ({_bounds.X},{_bounds.Y})");
-
         // Criar bitmap e graphics uma vez
         _bitmap = new Bitmap(_bounds.Width, _bounds.Height, PixelFormat.Format24bppRgb);
         _graphics = Graphics.FromImage(_bitmap);

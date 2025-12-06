@@ -163,23 +163,41 @@ class Program
 
             Console.WriteLine($"Enviando tela ({targetFps} FPS). Ctrl+C para parar.");
 
+            byte[]? lastJpeg = null; // Para congelar frame quando travado
+
             while (!cts.Token.IsCancellationRequested)
             {
                 try
                 {
-                    // Captura usando GDI (CopyFromScreen)
-                    // GDI ignora janelas LAYERED automaticamente!
-                    // Cliente vê overlay, servidor NÃO vê (como exemplo BEBE/CEFE)
                     byte[] jpeg;
                     int width, height;
 
-                    using var capturer = new GdiScreenCapturer(currentMonitor);
-                    jpeg = capturer.CaptureFrameJpeg(out width, out height);
-
-                    if (jpeg.Length == 0)
+                    // Quando travado: enviar frame congelado (último frame antes da trava)
+                    // Cliente vê: overlay vermelho
+                    // Servidor vê: desktop congelado (sem overlay)
+                    if (screenLocked && lastJpeg != null && lastJpeg.Length > 0)
                     {
-                        await Task.Delay(frameInterval, cts.Token);
-                        continue;
+                        // Enviar frame congelado
+                        jpeg = lastJpeg;
+                        width = lastWidth;
+                        height = lastHeight;
+                    }
+                    else
+                    {
+                        // Capturar novo frame
+                        using var capturer = new GdiScreenCapturer(currentMonitor);
+                        jpeg = capturer.CaptureFrameJpeg(out width, out height);
+
+                        if (jpeg.Length == 0)
+                        {
+                            await Task.Delay(frameInterval, cts.Token);
+                            continue;
+                        }
+
+                        // Guardar frame para usar quando travar
+                        lastJpeg = jpeg;
+                        lastWidth = width;
+                        lastHeight = height;
                     }
 
                     lastWidth = width;
