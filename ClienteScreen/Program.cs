@@ -167,12 +167,13 @@ class Program
             {
                 try
                 {
-                    // Sempre capturar e enviar frame ao vivo do desktop
-                    // Quando travado: cliente e servidor veem o overlay
+                    // Captura usando GDI (CopyFromScreen)
+                    // GDI ignora janelas LAYERED automaticamente!
+                    // Cliente vê overlay, servidor NÃO vê (como exemplo BEBE/CEFE)
                     byte[] jpeg;
                     int width, height;
 
-                    using var capturer = new DesktopDuplicationCapturer(currentMonitor);
+                    using var capturer = new GdiScreenCapturer(currentMonitor);
                     jpeg = capturer.CaptureFrameJpeg(out width, out height);
 
                     if (jpeg.Length == 0)
