@@ -19,6 +19,12 @@ public class ScreenLockOverlay
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
 
+    // SetWindowDisplayAffinity para excluir janela de captura de tela
+    private const uint WDA_NONE = 0x00000000;
+    private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")]
@@ -62,9 +68,10 @@ public class ScreenLockOverlay
 
             if (locked)
             {
-                // Ao travar: manter TRAVA visível no cliente
-                _showBehind = false;
+                // Ao travar: overlay já está excluído da captura por SetWindowDisplayAffinity
+                // Cliente vê o overlay, servidor NÃO vê (vê desktop limpo)
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
+                Console.WriteLine("[LOCK] Overlay visível para CLIENTE, invisível para SERVIDOR (captura)");
 
                 _lockForm?.BeginInvoke(new Action(() =>
                 {
@@ -72,13 +79,13 @@ public class ScreenLockOverlay
                     {
                         if (_lockForm != null)
                         {
-                            // Garantir que o overlay fique em primeiro plano e capture entrada
+                            // Trazer overlay para frente e torná-lo visível
                             _lockForm.TopMost = true;
                             _lockForm.BringToFront();
                             _lockForm.WindowState = FormWindowState.Maximized;
                             _lockForm.Activate();
                             SetForegroundWindow(_lockForm.Handle);
-                            Console.WriteLine("[LOCK] Overlay trazido para frente");
+                            Console.WriteLine("[LOCK] Overlay ativado (visível para usuário local)");
                         }
                     }
                     catch (Exception ex)
@@ -87,39 +94,38 @@ public class ScreenLockOverlay
                     }
                     _lockForm?.Refresh();
 
-                    // Ativar bloqueio local de input para evitar interação do usuário local
+                    // Bloquear entrada do usuário
                     try
                     {
                         InputBlocker.Start();
                         var ok = BlockInput(true);
-                        Console.WriteLine($"[LOCK] BlockInput(true) called, return={ok}");
+                        Console.WriteLine($"[LOCK] Input bloqueado: {ok}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[LOCK] Aviso: falha ao bloquear input: {ex.Message}");
+                        Console.WriteLine($"[LOCK] Aviso ao bloquear input: {ex.Message}");
                     }
                 }));
             }
             else
             {
                 // Ao destravar
-                _showBehind = false;
                 Console.WriteLine("[LOCK] ========== TRAVA DESATIVADA ==========");
 
                 _lockForm?.BeginInvoke(new Action(() =>
                 {
                     _lockForm?.Refresh();
 
-                    // Desativar bloqueio local
+                    // Desbloquear entrada
                     try
                     {
                         InputBlocker.Stop();
                         var ok = BlockInput(false);
-                        Console.WriteLine($"[LOCK] BlockInput(false) called, return={ok}");
+                        Console.WriteLine($"[LOCK] Input desbloqueado: {ok}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[LOCK] Aviso: falha ao desbloquear input: {ex.Message}");
+                        Console.WriteLine($"[LOCK] Aviso ao desbloquear input: {ex.Message}");
                     }
                 }));
             }
@@ -208,6 +214,26 @@ public class ScreenLockOverlay
             {
                 if (e.CloseReason == CloseReason.UserClosing)
                     e.Cancel = true;
+            };
+
+            // Quando a janela for criada, excluí-la da captura de tela
+            Load += (s, e) =>
+            {
+                try
+                {
+                    // Excluir esta janela de qualquer captura de tela (Print Screen, Desktop Duplication API, etc.)
+                    bool result = SetWindowDisplayAffinity(Handle, WDA_EXCLUDEFROMCAPTURE);
+                    Console.WriteLine($"[LOCK-FORM] SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) = {result}");
+                    if (!result)
+                    {
+                        int error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+                        Console.WriteLine($"[LOCK-FORM] Erro ao excluir da captura: Win32Error={error}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Exceção ao configurar exclusão de captura: {ex.Message}");
+                }
             };
 
             Console.WriteLine("[LOCK-FORM] LockForm criado com sucesso");

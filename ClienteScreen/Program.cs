@@ -167,13 +167,12 @@ class Program
             {
                 try
                 {
-                    // Quando travado: o overlay é excluído da captura pelo DwmSetWindowAttribute
-                    // Sempre enviar frames ao vivo para o servidor ver o desktop real
+                    // O overlay é excluído da captura pelo SetWindowDisplayAffinity
+                    // Servidor sempre vê o desktop real, cliente vê o overlay quando travado
                     byte[] jpeg;
                     int width, height;
 
                     // Sempre capturar frame ao vivo
-                    // O overlay é excluído da captura pelo DwmSetWindowAttribute
                     using var capturer = new DesktopDuplicationCapturer(currentMonitor);
                     jpeg = capturer.CaptureFrameJpeg(out width, out height);
 
