@@ -624,12 +624,37 @@ public class ScreenLockOverlay
             }
         }
 
+        /// <summary>
+        /// Desenha fundo xadrez preto e branco (checkered pattern)
+        /// </summary>
+        private void DrawCheckeredBackground(Graphics g)
+        {
+            int squareSize = 20; // Tamanho de cada quadrado do xadrez
+            using (var blackBrush = new SolidBrush(Color.Black))
+            using (var whiteBrush = new SolidBrush(Color.White))
+            {
+                for (int y = 0; y < Height; y += squareSize)
+                {
+                    for (int x = 0; x < Width; x += squareSize)
+                    {
+                        // Alternar cores em padrão xadrez
+                        bool isBlack = ((x / squareSize) + (y / squareSize)) % 2 == 0;
+                        var brush = isBlack ? blackBrush : whiteBrush;
+                        g.FillRectangle(brush, x, y, squareSize, squareSize);
+                    }
+                }
+            }
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
 
             var g = e.Graphics;
-            g.Clear(Color.Black);
+
+            // Desenhar fundo xadrez preto e branco
+            DrawCheckeredBackground(g);
+
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             // Se não está travado e opacity é baixa, não renderizar nada
