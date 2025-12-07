@@ -2,18 +2,25 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Automation;
 
 namespace ClienteScreen
 {
     /// <summary>
     /// Monitora navegadores para detectar acesso a sites de bancos
-    /// Padrão do sistema antigo: SendUrlProc() com UI Automation
+    /// Versão simplificada: usa título da janela em vez de UI Automation
     /// </summary>
     public class BrowserMonitor
     {
+        // P/Invoke para obter título da janela
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
         private readonly string[] _browserProcessNames = new[]
         {
             "chrome",      // Google Chrome
@@ -118,7 +125,8 @@ namespace ClienteScreen
         }
 
         /// <summary>
-        /// Extrai URL do navegador usando UI Automation (igual sistema antigo)
+        /// Extrai informação do navegador usando título da janela
+        /// Títulos geralmente contêm o nome do site (ex: "Banco do Brasil - Google Chrome")
         /// </summary>
         private string GetBrowserUrl(Process process)
         {
@@ -127,28 +135,23 @@ namespace ClienteScreen
 
             try
             {
-                // Usa UI Automation para acessar a barra de endereços
-                AutomationElement element = AutomationElement.FromHandle(process.MainWindowHandle);
-
-                if (element == null)
+                int length = GetWindowTextLength(process.MainWindowHandle);
+                if (length == 0)
                     return null;
 
-                // Procura por controle do tipo Edit (caixa de texto da URL)
-                Condition conditions = new AndCondition(
-                    new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id),
-                    new PropertyCondition(AutomationElement.IsControlElementProperty, true),
-                    new PropertyCondition(AutomationElement.IsContentElementProperty, true),
-                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
-                );
+                StringBuilder builder = new StringBuilder(length + 1);
+                GetWindowText(process.MainWindowHandle, builder, builder.Capacity);
 
-                AutomationElement urlElement = element.FindFirst(TreeScope.Descendants, conditions);
+                string title = builder.ToString();
 
-                if (urlElement == null)
-                    return null;
+                // Remove sufixos comuns dos navegadores
+                title = title.Replace(" - Google Chrome", "")
+                            .Replace(" - Mozilla Firefox", "")
+                            .Replace(" - Opera", "")
+                            .Replace(" - Microsoft​ Edge", "")
+                            .Replace(" - Internet Explorer", "");
 
-                // Extrai valor da barra de endereços
-                var pattern = urlElement.GetCurrentPattern(ValuePattern.Pattern) as ValuePattern;
-                return pattern?.Current.Value;
+                return title.ToLower(); // Retorna em minúsculo para comparação
             }
             catch
             {
