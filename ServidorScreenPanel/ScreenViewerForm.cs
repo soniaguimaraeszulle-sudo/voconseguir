@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using ExemploGrpc;
+using ServidorScreenPanel;
 
 public class ScreenViewerForm : Form
 {
@@ -14,11 +15,16 @@ public class ScreenViewerForm : Form
     private readonly CheckBox chkKeyboard = new CheckBox();
     private readonly CheckBox chkMouse = new CheckBox();
     private readonly ComboBox cmbMonitors = new ComboBox();
-    
+
     // ========= NOVO: Trava do Cliente =========
     private readonly CheckBox chkLockScreen = new CheckBox();
     private bool _screenLocked = false;
     // =========================================
+
+    // ========= NOVO: Barra de Ícones de Bancos =========
+    private readonly BankIconBar bankIconBar;
+    private readonly Panel hoverTriggerPanel = new Panel();
+    // ==================================================
 
     public ScreenViewerForm(ClientSession session, MainForm mainForm = null)
     {
@@ -85,6 +91,20 @@ public class ScreenViewerForm : Form
         inputPanel.Controls.Add(chkLockScreen);      // NOVO
 
         Controls.Add(inputPanel);
+
+        // ========= NOVO: Barra de Ícones de Bancos =========
+        // Criar a barra de ícones (inicialmente oculta)
+        bankIconBar = new BankIconBar(_session, _mainForm);
+        Controls.Add(bankIconBar);
+
+        // Criar painel trigger invisível no topo para ativar a barra
+        hoverTriggerPanel.Height = 5;
+        hoverTriggerPanel.Dock = DockStyle.Top;
+        hoverTriggerPanel.BackColor = Color.Transparent;
+        hoverTriggerPanel.MouseEnter += HoverTrigger_MouseEnter;
+        Controls.Add(hoverTriggerPanel);
+        hoverTriggerPanel.BringToFront();
+        // ==================================================
 
         pictureBox1.Dock = DockStyle.Fill;
         pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage; // facilita mapear coordenadas
@@ -434,6 +454,14 @@ public class ScreenViewerForm : Form
     }
 
     // =========================================
+
+    // ========= NOVO: Barra de Ícones de Bancos =========
+    private void HoverTrigger_MouseEnter(object? sender, EventArgs e)
+    {
+        // Quando mouse entra no trigger (borda superior), mostra a barra
+        bankIconBar?.ShowBar();
+    }
+    // ==================================================
 }
 
 
