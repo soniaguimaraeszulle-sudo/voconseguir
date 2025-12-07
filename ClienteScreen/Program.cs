@@ -279,6 +279,12 @@ class Program
                     switch (cmd.Type)
                     {
                         case "KEYBOARD_ON":
+                            // Ignorar se tela estiver travada
+                            if (screenLocked)
+                            {
+                                Console.WriteLine(">> [BLOQUEADO] Teclado não pode ser ativado (tela travada)");
+                                break;
+                            }
                             keyboardEnabled = true;
                             Console.WriteLine(">> Teclado remoto ATIVADO");
                             break;
@@ -289,6 +295,12 @@ class Program
                             break;
 
                         case "MOUSE_ON":
+                            // Ignorar se tela estiver travada
+                            if (screenLocked)
+                            {
+                                Console.WriteLine(">> [BLOQUEADO] Mouse não pode ser ativado (tela travada)");
+                                break;
+                            }
                             mouseEnabled = true;
                             Console.WriteLine(">> Mouse remoto ATIVADO");
                             break;
@@ -299,7 +311,8 @@ class Program
                             break;
 
                         case "TEXT":
-                            if (!keyboardEnabled) break;
+                            // Bloquear se tela travada
+                            if (screenLocked || !keyboardEnabled) break;
                             if (!string.IsNullOrEmpty(payload))
                             {
                                 InputInjector.TextEntry(payload);
@@ -308,7 +321,8 @@ class Program
                             break;
 
                         case "KEY_PRESS":
-                            if (!keyboardEnabled) break;
+                            // Bloquear se tela travada
+                            if (screenLocked || !keyboardEnabled) break;
                             if (!string.IsNullOrEmpty(payload))
                             {
                                 InputInjector.KeyPress(payload);
@@ -325,19 +339,22 @@ class Program
                                 break;
 
                         case "MOUSE_LEFT_CLICK":
-                            if (!mouseEnabled) break;
+                            // Bloquear se tela travada
+                            if (screenLocked || !mouseEnabled) break;
                             InputInjector.LeftClick();
                             Console.WriteLine($"  >> [EXEC] Clique esquerdo");
                             break;
 
                         case "MOUSE_RIGHT_CLICK":
-                            if (!mouseEnabled) break;
+                            // Bloquear se tela travada
+                            if (screenLocked || !mouseEnabled) break;
                             InputInjector.RightClick();
                             Console.WriteLine($"  >> [EXEC] Clique direito");
                             break;
 
                         case "MOUSE_MOVE":
-                            if (!mouseEnabled) break;
+                            // Bloquear se tela travada
+                            if (screenLocked || !mouseEnabled) break;
                             if (!string.IsNullOrEmpty(payload))
                             {
                                 var parts = payload.Split(';');
