@@ -25,6 +25,7 @@ public class MainForm : Form
     // Lista + ícones
     private readonly ListView lvClients = new ListView();
     private readonly ImageList _columnIcons = new ImageList();
+    private readonly ImageList _bankLogos = new ImageList();
 
     // Painel de log
     private readonly Panel logPanel = new Panel();
@@ -57,6 +58,7 @@ public class MainForm : Form
 
             InitHeader();
             InitIcons();
+            InitBankLogos();
             InitListView();
             InitLogPanel();
 
@@ -223,6 +225,64 @@ public class MainForm : Form
     }
 
     // =========================================================
+    // LOGOS DOS BANCOS
+    // =========================================================
+    private void InitBankLogos()
+    {
+        _bankLogos.ImageSize = new Size(80, 30);
+        _bankLogos.ColorDepth = ColorDepth.Depth32Bit;
+
+        // Criar logos estilizados para cada banco com cores oficiais
+        _bankLogos.Images.Add("BB", CreateBankLogo("BB", Color.FromArgb(255, 204, 0), Color.FromArgb(0, 51, 160))); // Amarelo e azul BB
+        _bankLogos.Images.Add("CEF", CreateBankLogo("CAIXA", Color.FromArgb(0, 104, 180), Color.White)); // Azul Caixa
+        _bankLogos.Images.Add("ITAU", CreateBankLogo("ITAÚ", Color.FromArgb(236, 109, 0), Color.White)); // Laranja Itaú
+        _bankLogos.Images.Add("BRADESCO", CreateBankLogo("BRADESCO", Color.FromArgb(204, 9, 47), Color.White)); // Vermelho Bradesco
+        _bankLogos.Images.Add("SANTANDER", CreateBankLogo("SANTANDER", Color.FromArgb(236, 0, 0), Color.White)); // Vermelho Santander
+        _bankLogos.Images.Add("SICRED", CreateBankLogo("SICREDI", Color.FromArgb(0, 169, 78), Color.White)); // Verde Sicredi
+        _bankLogos.Images.Add("SICOOB", CreateBankLogo("SICOOB", Color.FromArgb(0, 103, 56), Color.White)); // Verde escuro Sicoob
+        _bankLogos.Images.Add("BNB", CreateBankLogo("BNB", Color.FromArgb(0, 86, 150), Color.White)); // Azul BNB
+    }
+
+    private static Image CreateBankLogo(string text, Color bgColor, Color textColor)
+    {
+        var bmp = new Bitmap(80, 30);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+
+        // Fundo com gradiente sutil
+        using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+            new Rectangle(0, 0, 80, 30),
+            bgColor,
+            Color.FromArgb(Math.Max(0, bgColor.R - 20), Math.Max(0, bgColor.G - 20), Math.Max(0, bgColor.B - 20)),
+            45f))
+        {
+            g.FillRoundedRectangle(brush, 0, 0, 79, 29, 6);
+        }
+
+        // Borda sutil
+        using (var pen = new Pen(Color.FromArgb(50, Color.Black), 1))
+        {
+            g.DrawRoundedRectangle(pen, 0, 0, 79, 29, 6);
+        }
+
+        // Texto do banco
+        using var font = new Font("Segoe UI", text.Length > 6 ? 9 : 11, FontStyle.Bold);
+        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        using var textBrush = new SolidBrush(textColor);
+
+        // Sombra do texto
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(40, Color.Black)))
+        {
+            g.DrawString(text, font, shadowBrush, new RectangleF(1, 1, 80, 30), sf);
+        }
+
+        g.DrawString(text, font, textBrush, new RectangleF(0, 0, 80, 30), sf);
+
+        return bmp;
+    }
+
+    // =========================================================
     // LISTVIEW
     // =========================================================
     private void InitListView()
@@ -264,33 +324,64 @@ public class MainForm : Form
             g.FillRectangle(bg, bounds);
         }
 
-        int iconIndex = -1;
-        if (e.ColumnIndex == 1) iconIndex = 0;      // PC
-        else if (e.ColumnIndex == 2) iconIndex = 1; // IP
-        else if (e.ColumnIndex == 3) iconIndex = 2; // MAC
-        else if (e.ColumnIndex == 4) iconIndex = 3; // AV
-        else if (e.ColumnIndex == 5) iconIndex = 4; // Ping
-
-        int offsetX = bounds.Left + 4;
-
-        if (iconIndex >= 0)
+        // Coluna 0: Banco (desenhar logo)
+        if (e.ColumnIndex == 0)
         {
-            var img = _columnIcons.Images[iconIndex];
-            int y = bounds.Top + (bounds.Height - img.Height) / 2;
-            g.DrawImage(img, offsetX, y);
-            offsetX += img.Width + 4;
+            string bankName = e.SubItem?.Text?.ToUpper().Trim() ?? "";
+
+            // Tentar encontrar o logo do banco
+            if (_bankLogos.Images.ContainsKey(bankName))
+            {
+                var logo = _bankLogos.Images[bankName];
+                int x = bounds.Left + (bounds.Width - logo.Width) / 2;
+                int y = bounds.Top + (bounds.Height - logo.Height) / 2;
+                g.DrawImage(logo, x, y, logo.Width, logo.Height);
+            }
+            else
+            {
+                // Se não encontrar o logo, desenhar o texto
+                var textColor = selected ? Color.White : lvClients.ForeColor;
+                TextRenderer.DrawText(
+                    g,
+                    bankName,
+                    lvClients.Font,
+                    new Rectangle(bounds.Left + 4, bounds.Top, bounds.Width - 8, bounds.Height),
+                    textColor,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                );
+            }
         }
+        else
+        {
+            // Outras colunas: manter comportamento original
+            int iconIndex = -1;
+            if (e.ColumnIndex == 1) iconIndex = 0;      // PC
+            else if (e.ColumnIndex == 2) iconIndex = 1; // IP
+            else if (e.ColumnIndex == 3) iconIndex = 2; // MAC
+            else if (e.ColumnIndex == 4) iconIndex = 3; // AV
+            else if (e.ColumnIndex == 5) iconIndex = 4; // Ping
 
-        var textColor = selected ? Color.White : lvClients.ForeColor;
+            int offsetX = bounds.Left + 4;
 
-        TextRenderer.DrawText(
-            g,
-            e.SubItem?.Text ?? string.Empty,
-            lvClients.Font,
-            new Rectangle(offsetX, bounds.Top, bounds.Width - (offsetX - bounds.Left), bounds.Height),
-            textColor,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter
-        );
+            if (iconIndex >= 0)
+            {
+                var img = _columnIcons.Images[iconIndex];
+                int y = bounds.Top + (bounds.Height - img.Height) / 2;
+                g.DrawImage(img, offsetX, y);
+                offsetX += img.Width + 4;
+            }
+
+            var textColor = selected ? Color.White : lvClients.ForeColor;
+
+            TextRenderer.DrawText(
+                g,
+                e.SubItem?.Text ?? string.Empty,
+                lvClients.Font,
+                new Rectangle(offsetX, bounds.Top, bounds.Width - (offsetX - bounds.Left), bounds.Height),
+                textColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+            );
+        }
 
         using var pen = new Pen(Color.FromArgb(60, 60, 60));
         g.DrawRectangle(pen, bounds.Left, bounds.Top, bounds.Width - 1, bounds.Height - 1);
@@ -749,5 +840,37 @@ public class MainForm : Form
             }));
         }
         catch { }
+    }
+}
+
+// =========================================================
+// EXTENSÕES PARA DESENHAR RETÂNGULOS ARREDONDADOS
+// =========================================================
+public static class GraphicsExtensions
+{
+    public static void FillRoundedRectangle(this Graphics g, Brush brush, int x, int y, int width, int height, int radius)
+    {
+        using var path = GetRoundedRectPath(x, y, width, height, radius);
+        g.FillPath(brush, path);
+    }
+
+    public static void DrawRoundedRectangle(this Graphics g, Pen pen, int x, int y, int width, int height, int radius)
+    {
+        using var path = GetRoundedRectPath(x, y, width, height, radius);
+        g.DrawPath(pen, path);
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath GetRoundedRectPath(int x, int y, int width, int height, int radius)
+    {
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        int diameter = radius * 2;
+
+        path.AddArc(x, y, diameter, diameter, 180, 90);
+        path.AddArc(x + width - diameter, y, diameter, diameter, 270, 90);
+        path.AddArc(x + width - diameter, y + height - diameter, diameter, diameter, 0, 90);
+        path.AddArc(x, y + height - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+
+        return path;
     }
 }
