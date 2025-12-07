@@ -115,36 +115,101 @@ namespace ServidorScreenPanel
 
         private Image CreateBankPlaceholder(string bankCode)
         {
-            // Criar uma imagem placeholder temporária com a sigla do banco
             var bmp = new Bitmap(ICON_SIZE, ICON_SIZE);
             using (var g = Graphics.FromImage(bmp))
             {
-                // Cores por banco
-                Color bgColor = bankCode switch
-                {
-                    "BB" => Color.FromArgb(255, 255, 204, 0),      // Amarelo BB
-                    "CEF" => Color.FromArgb(255, 0, 102, 179),     // Azul Caixa
-                    "ITAU" => Color.FromArgb(255, 236, 95, 0),     // Laranja Itaú
-                    "BRADESCO" => Color.FromArgb(255, 204, 0, 0),  // Vermelho Bradesco
-                    "SANTANDER" => Color.FromArgb(255, 236, 0, 0), // Vermelho Santander
-                    "SICREDI" => Color.FromArgb(255, 0, 153, 51),  // Verde Sicredi
-                    "SICOOB" => Color.FromArgb(255, 0, 102, 51),   // Verde escuro Sicoob
-                    "BNB" => Color.FromArgb(255, 0, 102, 204),     // Azul BNB
-                    _ => Color.Gray
-                };
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 
-                g.FillRectangle(new SolidBrush(bgColor), 0, 0, ICON_SIZE, ICON_SIZE);
-
-                // Texto branco com a sigla
-                using (var font = new Font("Arial", 9, FontStyle.Bold))
+                switch (bankCode)
                 {
-                    var sf = new StringFormat
-                    {
-                        Alignment = StringAlignment.Center,
-                        LineAlignment = StringAlignment.Center
-                    };
-                    g.DrawString(bankCode, font, Brushes.White,
-                        new RectangleF(0, 0, ICON_SIZE, ICON_SIZE), sf);
+                    case "BB":
+                        // Banco do Brasil - Amarelo com duplo B
+                        g.FillEllipse(new SolidBrush(Color.FromArgb(255, 255, 204, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        using (var font = new Font("Arial Black", 14, FontStyle.Bold))
+                        {
+                            g.DrawString("BB", font, Brushes.White, new PointF(6, 10));
+                        }
+                        break;
+
+                    case "CEF":
+                        // Caixa - Azul com quadrado
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 179)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        g.FillRectangle(Brushes.White, 8, 8, 24, 24);
+                        using (var font = new Font("Arial", 8, FontStyle.Bold))
+                        {
+                            g.DrawString("CEF", font, new SolidBrush(Color.FromArgb(255, 0, 102, 179)), new PointF(10, 14));
+                        }
+                        break;
+
+                    case "ITAU":
+                        // Itaú - Laranja com símbolo
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 236, 95, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        g.FillEllipse(Brushes.White, 10, 10, 20, 20);
+                        using (var font = new Font("Arial", 7, FontStyle.Bold))
+                        {
+                            g.DrawString("itaú", font, new SolidBrush(Color.FromArgb(255, 236, 95, 0)), new PointF(11, 15));
+                        }
+                        break;
+
+                    case "BRADESCO":
+                        // Bradesco - Vermelho com círculo
+                        g.FillEllipse(new SolidBrush(Color.FromArgb(255, 204, 0, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        using (var font = new Font("Arial", 10, FontStyle.Bold))
+                        {
+                            g.DrawString("b", font, Brushes.White, new PointF(14, 12));
+                        }
+                        break;
+
+                    case "SANTANDER":
+                        // Santander - Vermelho com chama
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 236, 0, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        // Desenhar chama estilizada
+                        g.FillEllipse(Brushes.White, 12, 8, 16, 24);
+                        using (var font = new Font("Arial", 9, FontStyle.Bold))
+                        {
+                            g.DrawString("S", font, Brushes.Red, new PointF(16, 12));
+                        }
+                        break;
+
+                    case "SICREDI":
+                        // Sicredi - Verde com folha
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 153, 51)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        g.FillEllipse(Brushes.White, 8, 10, 12, 18);
+                        g.FillEllipse(Brushes.White, 20, 10, 12, 18);
+                        using (var font = new Font("Arial", 7, FontStyle.Bold))
+                        {
+                            g.DrawString("SI", font, new SolidBrush(Color.FromArgb(255, 0, 153, 51)), new PointF(13, 15));
+                        }
+                        break;
+
+                    case "SICOOB":
+                        // Sicoob - Verde escuro com hexágono
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 51)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        var hexPoints = new PointF[] {
+                            new PointF(20, 8), new PointF(28, 14), new PointF(28, 26),
+                            new PointF(20, 32), new PointF(12, 26), new PointF(12, 14)
+                        };
+                        g.FillPolygon(Brushes.White, hexPoints);
+                        using (var font = new Font("Arial", 6, FontStyle.Bold))
+                        {
+                            g.DrawString("SC", font, new SolidBrush(Color.FromArgb(255, 0, 102, 51)), new PointF(15, 17));
+                        }
+                        break;
+
+                    case "BNB":
+                        // BNB - Azul com estrela
+                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 204)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        g.FillEllipse(Brushes.White, 10, 10, 20, 20);
+                        using (var font = new Font("Arial", 8, FontStyle.Bold))
+                        {
+                            g.DrawString("BNB", font, new SolidBrush(Color.FromArgb(255, 0, 102, 204)), new PointF(10, 14));
+                        }
+                        break;
+
+                    default:
+                        g.FillRectangle(Brushes.Gray, 0, 0, ICON_SIZE, ICON_SIZE);
+                        break;
                 }
             }
             return bmp;
