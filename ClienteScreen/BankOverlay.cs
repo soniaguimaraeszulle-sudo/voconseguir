@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -10,7 +11,7 @@ namespace ClienteScreen
     /// Overlay de banco falso - Segue padrão BB_01/CEF_01 do sistema antigo
     /// Carrega imagem BMP da pasta overlay/
     /// </summary>
-    public partial class BankOverlay : Form
+    public class BankOverlay : Form
     {
         // ========== P/Invoke para SetWindowPos (TopMost) ==========
         static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);

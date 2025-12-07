@@ -6,6 +6,7 @@ using System.Net.Http;
 using Grpc.Core;
 using ExemploGrpc;
 using System.Windows.Forms;
+using ClienteScreen;
 // substituído uso de WindowsInput por LocalInput (mais compatível)
 
 class Program
