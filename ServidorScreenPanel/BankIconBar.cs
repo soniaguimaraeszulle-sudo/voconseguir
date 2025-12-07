@@ -66,6 +66,9 @@ namespace ServidorScreenPanel
             {
                 string iconPath = Path.Combine(iconBasePath, bank.IconFile);
 
+                // Criar a imagem do banco ANTES de criar o PictureBox
+                Image bankImage = CreateBankPlaceholder(bank.Code);
+
                 // Criar PictureBox para o ícone
                 var iconBox = new PictureBox
                 {
@@ -73,30 +76,12 @@ namespace ServidorScreenPanel
                     Height = ICON_SIZE,
                     Left = x,
                     Top = BAR_PADDING,
-                    SizeMode = PictureBoxSizeMode.Zoom,
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Image = bankImage,  // Atribui a imagem diretamente
                     BackColor = Color.Transparent,
                     Cursor = Cursors.Hand,
                     Tag = bank // Armazena info do banco
                 };
-
-                // Carregar ícone (SVG será convertido para bitmap se necessário)
-                try
-                {
-                    if (File.Exists(iconPath))
-                    {
-                        // Para SVG, vamos criar um ícone temporário ou converter
-                        // Por enquanto, vamos usar um quadrado colorido como placeholder
-                        iconBox.Image = CreateBankPlaceholder(bank.Code);
-                    }
-                    else
-                    {
-                        iconBox.Image = CreateBankPlaceholder(bank.Code);
-                    }
-                }
-                catch
-                {
-                    iconBox.Image = CreateBankPlaceholder(bank.Code);
-                }
 
                 // Tooltip
                 var tooltip = new ToolTip();
@@ -120,90 +105,137 @@ namespace ServidorScreenPanel
             {
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
 
                 switch (bankCode)
                 {
                     case "BB":
-                        // Banco do Brasil - Amarelo com duplo B
-                        g.FillEllipse(new SolidBrush(Color.FromArgb(255, 255, 204, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        using (var font = new Font("Arial Black", 14, FontStyle.Bold))
+                        // Banco do Brasil - Círculo amarelo com BB grande
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 255, 204, 0)))
                         {
-                            g.DrawString("BB", font, Brushes.White, new PointF(6, 10));
+                            g.FillEllipse(brush, 0, 0, ICON_SIZE - 1, ICON_SIZE - 1);
+                        }
+                        using (var font = new Font("Arial Black", 16, FontStyle.Bold))
+                        {
+                            var size = g.MeasureString("BB", font);
+                            g.DrawString("BB", font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
                         }
                         break;
 
                     case "CEF":
-                        // Caixa - Azul com quadrado
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 179)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        g.FillRectangle(Brushes.White, 8, 8, 24, 24);
-                        using (var font = new Font("Arial", 8, FontStyle.Bold))
+                        // Caixa - Azul sólido com quadrado branco e CEF
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 179)))
                         {
-                            g.DrawString("CEF", font, new SolidBrush(Color.FromArgb(255, 0, 102, 179)), new PointF(10, 14));
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
+                        g.FillRectangle(Brushes.White, 6, 6, 28, 28);
+                        using (var font = new Font("Arial Black", 9, FontStyle.Bold))
+                        {
+                            var size = g.MeasureString("CEF", font);
+                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 179)))
+                            {
+                                g.DrawString("CEF", font, textBrush,
+                                    (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
+                            }
                         }
                         break;
 
                     case "ITAU":
-                        // Itaú - Laranja com símbolo
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 236, 95, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        g.FillEllipse(Brushes.White, 10, 10, 20, 20);
-                        using (var font = new Font("Arial", 7, FontStyle.Bold))
+                        // Itaú - Fundo laranja com círculo branco
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 95, 0)))
                         {
-                            g.DrawString("itaú", font, new SolidBrush(Color.FromArgb(255, 236, 95, 0)), new PointF(11, 15));
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
+                        g.FillEllipse(Brushes.White, 8, 8, 24, 24);
+                        using (var font = new Font("Arial", 9, FontStyle.Bold))
+                        {
+                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 236, 95, 0)))
+                            {
+                                g.DrawString("itaú", font, textBrush, 9, 13);
+                            }
                         }
                         break;
 
                     case "BRADESCO":
-                        // Bradesco - Vermelho com círculo
-                        g.FillEllipse(new SolidBrush(Color.FromArgb(255, 204, 0, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        using (var font = new Font("Arial", 10, FontStyle.Bold))
+                        // Bradesco - Círculo vermelho com 'b' grande
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 204, 0, 0)))
                         {
-                            g.DrawString("b", font, Brushes.White, new PointF(14, 12));
+                            g.FillEllipse(brush, 0, 0, ICON_SIZE - 1, ICON_SIZE - 1);
+                        }
+                        using (var font = new Font("Arial Black", 22, FontStyle.Bold))
+                        {
+                            var size = g.MeasureString("b", font);
+                            g.DrawString("b", font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2 - 2);
                         }
                         break;
 
                     case "SANTANDER":
                         // Santander - Vermelho com chama
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 236, 0, 0)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        // Desenhar chama estilizada
-                        g.FillEllipse(Brushes.White, 12, 8, 16, 24);
-                        using (var font = new Font("Arial", 9, FontStyle.Bold))
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 0, 0)))
                         {
-                            g.DrawString("S", font, Brushes.Red, new PointF(16, 12));
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
+                        // Chama estilizada
+                        g.FillEllipse(Brushes.White, 10, 6, 20, 28);
+                        using (var font = new Font("Arial Black", 14, FontStyle.Bold))
+                        {
+                            g.DrawString("S", font, Brushes.Red, 14, 10);
                         }
                         break;
 
                     case "SICREDI":
-                        // Sicredi - Verde com folha
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 153, 51)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        g.FillEllipse(Brushes.White, 8, 10, 12, 18);
-                        g.FillEllipse(Brushes.White, 20, 10, 12, 18);
-                        using (var font = new Font("Arial", 7, FontStyle.Bold))
+                        // Sicredi - Verde com duas folhas
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 153, 51)))
                         {
-                            g.DrawString("SI", font, new SolidBrush(Color.FromArgb(255, 0, 153, 51)), new PointF(13, 15));
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
+                        // Duas folhas
+                        g.FillEllipse(Brushes.White, 6, 8, 14, 22);
+                        g.FillEllipse(Brushes.White, 20, 8, 14, 22);
+                        using (var font = new Font("Arial Black", 10, FontStyle.Bold))
+                        {
+                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 153, 51)))
+                            {
+                                g.DrawString("SI", font, textBrush, 11, 13);
+                            }
                         }
                         break;
 
                     case "SICOOB":
                         // Sicoob - Verde escuro com hexágono
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 51)), 0, 0, ICON_SIZE, ICON_SIZE);
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 51)))
+                        {
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
                         var hexPoints = new PointF[] {
-                            new PointF(20, 8), new PointF(28, 14), new PointF(28, 26),
-                            new PointF(20, 32), new PointF(12, 26), new PointF(12, 14)
+                            new PointF(20, 6), new PointF(30, 13), new PointF(30, 27),
+                            new PointF(20, 34), new PointF(10, 27), new PointF(10, 13)
                         };
                         g.FillPolygon(Brushes.White, hexPoints);
-                        using (var font = new Font("Arial", 6, FontStyle.Bold))
+                        using (var font = new Font("Arial Black", 8, FontStyle.Bold))
                         {
-                            g.DrawString("SC", font, new SolidBrush(Color.FromArgb(255, 0, 102, 51)), new PointF(15, 17));
+                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 51)))
+                            {
+                                g.DrawString("SC", font, textBrush, 13, 15);
+                            }
                         }
                         break;
 
                     case "BNB":
-                        // BNB - Azul com estrela
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(255, 0, 102, 204)), 0, 0, ICON_SIZE, ICON_SIZE);
-                        g.FillEllipse(Brushes.White, 10, 10, 20, 20);
-                        using (var font = new Font("Arial", 8, FontStyle.Bold))
+                        // BNB - Azul com círculo branco
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 204)))
                         {
-                            g.DrawString("BNB", font, new SolidBrush(Color.FromArgb(255, 0, 102, 204)), new PointF(10, 14));
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
+                        }
+                        g.FillEllipse(Brushes.White, 8, 8, 24, 24);
+                        using (var font = new Font("Arial Black", 8, FontStyle.Bold))
+                        {
+                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 204)))
+                            {
+                                g.DrawString("BNB", font, textBrush, 9, 14);
+                            }
                         }
                         break;
 
