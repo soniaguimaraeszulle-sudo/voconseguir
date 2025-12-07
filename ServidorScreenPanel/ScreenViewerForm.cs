@@ -8,7 +8,7 @@ using ServidorScreenPanel;
 public class ScreenViewerForm : Form
 {
     private readonly ClientSession _session;
-    private readonly MainForm _mainForm;
+    private readonly MainForm? _mainForm;
     private readonly PictureBox pictureBox1 = new PictureBox();
     // painel superior com controles de entrada remota
     private readonly Panel inputPanel = new Panel();
@@ -22,11 +22,11 @@ public class ScreenViewerForm : Form
     // =========================================
 
     // ========= NOVO: Barra de Ícones de Bancos =========
-    private readonly BankIconBar bankIconBar;
+    private readonly BankIconBar? bankIconBar;
     private readonly Panel hoverTriggerPanel = new Panel();
     // ==================================================
 
-    public ScreenViewerForm(ClientSession session, MainForm mainForm = null)
+    public ScreenViewerForm(ClientSession session, MainForm? mainForm = null)
     {
         _session = session;
         _mainForm = mainForm;

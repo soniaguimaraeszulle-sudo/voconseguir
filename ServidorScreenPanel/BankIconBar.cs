@@ -15,7 +15,7 @@ namespace ServidorScreenPanel
     {
         private readonly ClientSession _session;
         private readonly MainForm _mainForm;
-        private Timer _hideTimer;
+        private System.Windows.Forms.Timer _hideTimer;
         private bool _isVisible = false;
         private const int ICON_SIZE = 40;
         private const int ICON_SPACING = 8;
@@ -248,7 +248,7 @@ namespace ServidorScreenPanel
 
         private void SetupAutoHide()
         {
-            _hideTimer = new Timer
+            _hideTimer = new System.Windows.Forms.Timer
             {
                 Interval = 2000 // Esconde após 2 segundos sem mouse
             };
