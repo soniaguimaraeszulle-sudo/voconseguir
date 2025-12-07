@@ -40,10 +40,10 @@ namespace ClienteScreen
         private string imagePath;
         private IntPtr browserWindowHandle;
 
-        public BankOverlay(string imageFileName, IntPtr browserHandle)
+        public BankOverlay(string imageFileName, IntPtr browserHandle = default)
         {
             imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "overlay", imageFileName);
-            browserWindowHandle = browserHandle;
+            // Não usa browserHandle - sempre fullscreen com background xadrez
             InitializeComponent();
         }
 
@@ -51,33 +51,22 @@ namespace ClienteScreen
         {
             this.SuspendLayout();
 
-            // ========== Configuração do Form ==========
+            // ========== Configuração do Form - FULLSCREEN ==========
             this.FormBorderStyle = FormBorderStyle.None;  // Sem bordas
+            this.WindowState = FormWindowState.Maximized;  // FULLSCREEN
             this.TopMost = true;  // Sempre no topo
             this.BackColor = Color.Black;  // Fundo preto padrão
-            this.StartPosition = FormStartPosition.Manual;  // Posição manual
 
-            // Obter dimensões da janela do navegador
-            if (browserWindowHandle != IntPtr.Zero && GetWindowRect(browserWindowHandle, out RECT rect))
-            {
-                this.Location = new Point(rect.Left, rect.Top);
-                this.Size = new Size(rect.Right - rect.Left, rect.Bottom - rect.Top);
-            }
-            else
-            {
-                // Fallback: fullscreen se não conseguir obter janela
-                this.WindowState = FormWindowState.Maximized;
-            }
-
-            // Criar padrão xadrez preto e branco no fundo
+            // Desenhar padrão xadrez preto e branco em toda a tela
             this.Paint += BankOverlay_Paint;
 
-            // ========== PictureBox para a imagem ==========
+            // ========== PictureBox para a imagem - TAMANHO ORIGINAL CENTRALIZADO ==========
             pictureBox = new PictureBox
             {
-                SizeMode = PictureBoxSizeMode.CenterImage,
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent
+                SizeMode = PictureBoxSizeMode.CenterImage,  // Centraliza sem esticar
+                BackColor = Color.Transparent,
+                Location = new Point(0, 0),
+                Dock = DockStyle.Fill  // Preenche form, mas CenterImage mantém tamanho original
             };
 
             this.Controls.Add(pictureBox);
