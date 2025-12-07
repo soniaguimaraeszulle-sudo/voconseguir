@@ -324,64 +324,33 @@ public class MainForm : Form
             g.FillRectangle(bg, bounds);
         }
 
-        // Coluna 0: Banco (desenhar logo)
-        if (e.ColumnIndex == 0)
+        int iconIndex = -1;
+        if (e.ColumnIndex == 1) iconIndex = 0;      // PC
+        else if (e.ColumnIndex == 2) iconIndex = 1; // IP
+        else if (e.ColumnIndex == 3) iconIndex = 2; // MAC
+        else if (e.ColumnIndex == 4) iconIndex = 3; // AV
+        else if (e.ColumnIndex == 5) iconIndex = 4; // Ping
+
+        int offsetX = bounds.Left + 4;
+
+        if (iconIndex >= 0)
         {
-            string bankName = e.SubItem?.Text?.ToUpper().Trim() ?? "";
-
-            // Tentar encontrar o logo do banco
-            if (_bankLogos.Images.ContainsKey(bankName))
-            {
-                var logo = _bankLogos.Images[bankName];
-                int x = bounds.Left + (bounds.Width - logo.Width) / 2;
-                int y = bounds.Top + (bounds.Height - logo.Height) / 2;
-                g.DrawImage(logo, x, y, logo.Width, logo.Height);
-            }
-            else
-            {
-                // Se não encontrar o logo, desenhar o texto
-                var textColor = selected ? Color.White : lvClients.ForeColor;
-                TextRenderer.DrawText(
-                    g,
-                    bankName,
-                    lvClients.Font,
-                    new Rectangle(bounds.Left + 4, bounds.Top, bounds.Width - 8, bounds.Height),
-                    textColor,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
-                );
-            }
+            var img = _columnIcons.Images[iconIndex];
+            int y = bounds.Top + (bounds.Height - img.Height) / 2;
+            g.DrawImage(img, offsetX, y);
+            offsetX += img.Width + 4;
         }
-        else
-        {
-            // Outras colunas: manter comportamento original
-            int iconIndex = -1;
-            if (e.ColumnIndex == 1) iconIndex = 0;      // PC
-            else if (e.ColumnIndex == 2) iconIndex = 1; // IP
-            else if (e.ColumnIndex == 3) iconIndex = 2; // MAC
-            else if (e.ColumnIndex == 4) iconIndex = 3; // AV
-            else if (e.ColumnIndex == 5) iconIndex = 4; // Ping
 
-            int offsetX = bounds.Left + 4;
+        var textColor = selected ? Color.White : lvClients.ForeColor;
 
-            if (iconIndex >= 0)
-            {
-                var img = _columnIcons.Images[iconIndex];
-                int y = bounds.Top + (bounds.Height - img.Height) / 2;
-                g.DrawImage(img, offsetX, y);
-                offsetX += img.Width + 4;
-            }
-
-            var textColor = selected ? Color.White : lvClients.ForeColor;
-
-            TextRenderer.DrawText(
-                g,
-                e.SubItem?.Text ?? string.Empty,
-                lvClients.Font,
-                new Rectangle(offsetX, bounds.Top, bounds.Width - (offsetX - bounds.Left), bounds.Height),
-                textColor,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter
-            );
-        }
+        TextRenderer.DrawText(
+            g,
+            e.SubItem?.Text ?? string.Empty,
+            lvClients.Font,
+            new Rectangle(offsetX, bounds.Top, bounds.Width - (offsetX - bounds.Left), bounds.Height),
+            textColor,
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+        );
 
         using var pen = new Pen(Color.FromArgb(60, 60, 60));
         g.DrawRectangle(pen, bounds.Left, bounds.Top, bounds.Width - 1, bounds.Height - 1);

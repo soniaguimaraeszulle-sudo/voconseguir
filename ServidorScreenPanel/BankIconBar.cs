@@ -110,140 +110,187 @@ namespace ServidorScreenPanel
                 switch (bankCode)
                 {
                     case "BB":
-                        // Banco do Brasil - Círculo amarelo com BB grande
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 255, 204, 0)))
+                        // Banco do Brasil - Quadrado amarelo com BB azul estilizado
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 255, 204, 0))) // Amarelo BB
                         {
-                            g.FillEllipse(brush, 0, 0, ICON_SIZE - 1, ICON_SIZE - 1);
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        using (var font = new Font("Arial Black", 16, FontStyle.Bold))
+                        using (var font = new Font("Arial Black", 18, FontStyle.Bold))
+                        using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 51, 160))) // Azul BB
                         {
                             var size = g.MeasureString("BB", font);
-                            g.DrawString("BB", font, Brushes.White,
-                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
+                            g.DrawString("BB", font, textBrush,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2 - 1);
                         }
                         break;
 
                     case "CEF":
-                        // Caixa - Azul sólido com quadrado branco e CEF
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 179)))
+                        // Caixa - Fundo azul com "CAIXA" branco
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 104, 180))) // Azul Caixa
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        g.FillRectangle(Brushes.White, 6, 6, 28, 28);
-                        using (var font = new Font("Arial Black", 9, FontStyle.Bold))
+                        using (var font = new Font("Arial Black", 7, FontStyle.Bold))
                         {
-                            var size = g.MeasureString("CEF", font);
-                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 179)))
-                            {
-                                g.DrawString("CEF", font, textBrush,
-                                    (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
-                            }
+                            var text = "CAIXA";
+                            var size = g.MeasureString(text, font);
+                            g.DrawString(text, font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
                         }
                         break;
 
                     case "ITAU":
-                        // Itaú - Fundo laranja com círculo branco
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 95, 0)))
+                        // Itaú - Fundo laranja com quadrado branco estilizado
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 109, 0))) // Laranja Itaú
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        g.FillEllipse(Brushes.White, 8, 8, 24, 24);
-                        using (var font = new Font("Arial", 9, FontStyle.Bold))
+                        // Cubo 3D estilizado do Itaú
+                        using (var whiteBrush = new SolidBrush(Color.White))
                         {
-                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 236, 95, 0)))
+                            // Face frontal
+                            Point[] frontFace = {
+                                new Point(20, 10),
+                                new Point(30, 10),
+                                new Point(30, 20),
+                                new Point(20, 20)
+                            };
+                            g.FillPolygon(whiteBrush, frontFace);
+
+                            // Face superior
+                            Point[] topFace = {
+                                new Point(20, 10),
+                                new Point(25, 7),
+                                new Point(35, 7),
+                                new Point(30, 10)
+                            };
+                            using (var lightBrush = new SolidBrush(Color.FromArgb(255, 230, 230, 230)))
                             {
-                                g.DrawString("itaú", font, textBrush, 9, 13);
+                                g.FillPolygon(lightBrush, topFace);
+                            }
+
+                            // Face lateral
+                            Point[] sideFace = {
+                                new Point(30, 10),
+                                new Point(35, 7),
+                                new Point(35, 17),
+                                new Point(30, 20)
+                            };
+                            using (var darkBrush = new SolidBrush(Color.FromArgb(255, 200, 200, 200)))
+                            {
+                                g.FillPolygon(darkBrush, sideFace);
                             }
                         }
                         break;
 
                     case "BRADESCO":
-                        // Bradesco - Círculo vermelho com 'b' grande
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 204, 0, 0)))
+                        // Bradesco - Quadrado vermelho com texto estilizado
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 204, 9, 47))) // Vermelho Bradesco
                         {
-                            g.FillEllipse(brush, 0, 0, ICON_SIZE - 1, ICON_SIZE - 1);
+                            g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        using (var font = new Font("Arial Black", 22, FontStyle.Bold))
+                        using (var font = new Font("Arial Black", 8, FontStyle.Bold))
                         {
-                            var size = g.MeasureString("b", font);
-                            g.DrawString("b", font, Brushes.White,
-                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2 - 2);
+                            g.DrawString("bradesco", font, Brushes.White, 2, 14);
                         }
                         break;
 
                     case "SANTANDER":
-                        // Santander - Vermelho com chama
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 0, 0)))
+                        // Santander - Vermelho com chama estilizada
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 236, 0, 0))) // Vermelho Santander
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        // Chama estilizada
-                        g.FillEllipse(Brushes.White, 10, 6, 20, 28);
-                        using (var font = new Font("Arial Black", 14, FontStyle.Bold))
+                        // Chama estilizada (logo Santander)
+                        using (var flameBrush = new SolidBrush(Color.White))
                         {
-                            g.DrawString("S", font, Brushes.Red, 14, 10);
+                            Point[] flame = {
+                                new Point(20, 28),
+                                new Point(25, 18),
+                                new Point(23, 12),
+                                new Point(20, 8),
+                                new Point(17, 12),
+                                new Point(15, 18)
+                            };
+                            g.FillPolygon(flameBrush, flame);
                         }
                         break;
 
                     case "SICREDI":
-                        // Sicredi - Verde com duas folhas
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 153, 51)))
+                        // Sicredi - Verde com círculo e estrela
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 169, 78))) // Verde Sicredi
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        // Duas folhas
-                        g.FillEllipse(Brushes.White, 6, 8, 14, 22);
-                        g.FillEllipse(Brushes.White, 20, 8, 14, 22);
-                        using (var font = new Font("Arial Black", 10, FontStyle.Bold))
+                        // Círculo branco
+                        g.FillEllipse(Brushes.White, 10, 10, 20, 20);
+                        // Estrela verde no centro
+                        using (var starBrush = new SolidBrush(Color.FromArgb(255, 0, 169, 78)))
                         {
-                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 153, 51)))
-                            {
-                                g.DrawString("SI", font, textBrush, 11, 13);
-                            }
+                            Point[] star = {
+                                new Point(20, 12),
+                                new Point(21, 17),
+                                new Point(26, 17),
+                                new Point(22, 20),
+                                new Point(24, 25),
+                                new Point(20, 22),
+                                new Point(16, 25),
+                                new Point(18, 20),
+                                new Point(14, 17),
+                                new Point(19, 17)
+                            };
+                            g.FillPolygon(starBrush, star);
                         }
                         break;
 
                     case "SICOOB":
-                        // Sicoob - Verde escuro com hexágono
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 51)))
+                        // Sicoob - Verde escuro com design de cooperativa
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 103, 56))) // Verde Sicoob
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        var hexPoints = new PointF[] {
-                            new PointF(20, 6), new PointF(30, 13), new PointF(30, 27),
-                            new PointF(20, 34), new PointF(10, 27), new PointF(10, 13)
-                        };
-                        g.FillPolygon(Brushes.White, hexPoints);
                         using (var font = new Font("Arial Black", 8, FontStyle.Bold))
                         {
-                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 51)))
-                            {
-                                g.DrawString("SC", font, textBrush, 13, 15);
-                            }
+                            var text = "sicoob";
+                            var size = g.MeasureString(text, font);
+                            g.DrawString(text, font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
                         }
                         break;
 
                     case "BNB":
-                        // BNB - Azul com círculo branco
-                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 102, 204)))
+                        // BNB - Azul com texto estilizado
+                        using (var brush = new SolidBrush(Color.FromArgb(255, 0, 86, 150))) // Azul BNB
                         {
                             g.FillRectangle(brush, 0, 0, ICON_SIZE, ICON_SIZE);
                         }
-                        g.FillEllipse(Brushes.White, 8, 8, 24, 24);
-                        using (var font = new Font("Arial Black", 8, FontStyle.Bold))
+                        using (var font = new Font("Arial Black", 14, FontStyle.Bold))
                         {
-                            using (var textBrush = new SolidBrush(Color.FromArgb(255, 0, 102, 204)))
-                            {
-                                g.DrawString("BNB", font, textBrush, 9, 14);
-                            }
+                            var size = g.MeasureString("BNB", font);
+                            g.DrawString("BNB", font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2 - 1);
                         }
                         break;
 
                     default:
-                        g.FillRectangle(Brushes.Gray, 0, 0, ICON_SIZE, ICON_SIZE);
+                        // Fallback - fundo cinza com código do banco
+                        g.FillRectangle(Brushes.DarkGray, 0, 0, ICON_SIZE, ICON_SIZE);
+                        using (var font = new Font("Arial", 8, FontStyle.Bold))
+                        {
+                            var size = g.MeasureString(bankCode, font);
+                            g.DrawString(bankCode, font, Brushes.White,
+                                (ICON_SIZE - size.Width) / 2, (ICON_SIZE - size.Height) / 2);
+                        }
                         break;
                 }
+
+                // Bordas sutis para todos os ícones
+                using (var pen = new Pen(Color.FromArgb(100, Color.Black), 1))
+                {
+                    g.DrawRectangle(pen, 0, 0, ICON_SIZE - 1, ICON_SIZE - 1);
+                }
             }
+
             return bmp;
         }
 
